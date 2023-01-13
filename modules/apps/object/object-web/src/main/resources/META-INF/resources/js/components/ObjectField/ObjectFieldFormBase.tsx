@@ -252,7 +252,7 @@ export default function ObjectFieldFormBase({
 	const getMandatoryToggleDisabledState = () => {
 		if (
 			oneToManyRelationship &&
-			oneToManyRelationship.deletionType !== 'disassociate'
+			oneToManyRelationship.deletionType === 'disassociate'
 		) {
 			return false;
 		}
