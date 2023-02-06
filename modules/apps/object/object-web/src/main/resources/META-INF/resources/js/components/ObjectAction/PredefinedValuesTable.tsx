@@ -198,9 +198,9 @@ export default function PredefinedValuesTable({
 		};
 
 		const deletePredefinedValueField = ({itemData}: {itemData: Item}) => {
-			const [name] = itemData.name.props.children;
+			const [label] = itemData.label.props.children;
 
-			if (objectFieldsMap.get(name)?.required) {
+			if (objectFieldsMap.get(label)?.required) {
 				openToast({
 					message: Liferay.Language.get(
 						'required-fields-cannot-be-deleted'
@@ -212,7 +212,9 @@ export default function PredefinedValuesTable({
 			}
 
 			const newPredefinedValues = predefinedValues?.filter(
-				(field) => field.name !== name
+				(field) =>
+					getLocalizableLabel(creationLanguageId, field.label) !==
+					label
 			);
 
 			setValues({
