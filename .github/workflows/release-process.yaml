@@ -1,0 +1,13 @@
+on:
+  push:
+    branches:
+      - 'fake-master'
+jobs:
+  blockers-tracker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        run: ./.github/workflows/blocker-tracker-script.sh
+        env:
+          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+          SLACK_WEB_HOOK_URL: ${{ secrets.SLACK_WEB_HOOK_URL }}
