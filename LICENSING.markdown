@@ -1,4 +1,4 @@
-# Liferay dual-licensing
+# Liferay dual-licensingg
 
 This software is available to you under a dual-licensing approach, whereby you may choose under any of the following options:
 
