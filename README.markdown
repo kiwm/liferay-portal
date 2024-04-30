@@ -11,17 +11,8 @@ open source developers who volunteer their time and energy to help with the
 release, whether it was bug fixing, idea generation, documentation,
 translations, or other contributions that helped to improve this release.
 test
-aaaaaa
-aaaaaaa
-bbbbbbb
-xxxxxx
-sdfsdfds
 
-ssss
-
-sssss
-
-
+ddddd
 ## License
 
 `SPDX-License-Identifier: (LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06`
