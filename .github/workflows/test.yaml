@@ -27,3 +27,16 @@ jobs:
 
       - name: Run Format Source Script
         run: ./.github/workflows/test.sh
+
+      - uses: chrnorm/deployment-action@v2
+        name: Create GitHub deployment
+        id: deployment
+        with:
+          token: '${{ github.token }}'
+          environment-url: http://my-app-url.com
+          environment: production
+
+      - name: Deploy my app
+        run: |
+          # add your deployment code here
+
