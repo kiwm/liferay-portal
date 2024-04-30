@@ -14,5 +14,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
 
-      - name: Run Script
-        run: ./your_script.sh
+      - name: Run Ant All
+        run: ant all
+
+      - name: Run Format Source Script
+        run: ./test.sh
