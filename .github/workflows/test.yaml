@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     name: Build
+    env:
+      ANT_OPTS: "-Xmx2560m"
     runs-on: ubuntu-latest
 
     steps:
