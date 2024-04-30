@@ -1,4 +1,2 @@
 echo tudo certo
 
-ls
-
