@@ -48,9 +48,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -74,7 +72,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = AnalyticsAssociationPersistence.class)
 public class AnalyticsAssociationPersistenceImpl
-	extends BasePersistenceImpl<AnalyticsAssociation>
+	extends BasePersistenceImpl
+		<AnalyticsAssociation, NoSuchAssociationException>
 	implements AnalyticsAssociationPersistence {
 
 	/*
@@ -1051,53 +1050,6 @@ public class AnalyticsAssociationPersistenceImpl
 	}
 
 	/**
-	 * Clears the cache for all analytics associations.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(AnalyticsAssociationImpl.class);
-
-		finderCache.clearCache(AnalyticsAssociationImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the analytics association.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(AnalyticsAssociation analyticsAssociation) {
-		entityCache.removeResult(
-			AnalyticsAssociationImpl.class, analyticsAssociation);
-	}
-
-	@Override
-	public void clearCache(List<AnalyticsAssociation> analyticsAssociations) {
-		for (AnalyticsAssociation analyticsAssociation :
-				analyticsAssociations) {
-
-			entityCache.removeResult(
-				AnalyticsAssociationImpl.class, analyticsAssociation);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(AnalyticsAssociationImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				AnalyticsAssociationImpl.class, primaryKey);
-		}
-	}
-
-	/**
 	 * Creates a new analytics association with the primary key. Does not add the analytics association to the database.
 	 *
 	 * @param analyticsAssociationId the primary key for the new analytics association
@@ -1128,48 +1080,6 @@ public class AnalyticsAssociationPersistenceImpl
 		throws NoSuchAssociationException {
 
 		return remove((Serializable)analyticsAssociationId);
-	}
-
-	/**
-	 * Removes the analytics association with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the analytics association
-	 * @return the analytics association that was removed
-	 * @throws NoSuchAssociationException if a analytics association with the primary key could not be found
-	 */
-	@Override
-	public AnalyticsAssociation remove(Serializable primaryKey)
-		throws NoSuchAssociationException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			AnalyticsAssociation analyticsAssociation =
-				(AnalyticsAssociation)session.get(
-					AnalyticsAssociationImpl.class, primaryKey);
-
-			if (analyticsAssociation == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchAssociationException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(analyticsAssociation);
-		}
-		catch (NoSuchAssociationException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1298,32 +1208,6 @@ public class AnalyticsAssociationPersistenceImpl
 	}
 
 	/**
-	 * Returns the analytics association with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the analytics association
-	 * @return the analytics association
-	 * @throws NoSuchAssociationException if a analytics association with the primary key could not be found
-	 */
-	@Override
-	public AnalyticsAssociation findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchAssociationException {
-
-		AnalyticsAssociation analyticsAssociation = fetchByPrimaryKey(
-			primaryKey);
-
-		if (analyticsAssociation == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchAssociationException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return analyticsAssociation;
-	}
-
-	/**
 	 * Returns the analytics association with the primary key or throws a <code>NoSuchAssociationException</code> if it could not be found.
 	 *
 	 * @param analyticsAssociationId the primary key of the analytics association
@@ -1337,53 +1221,9 @@ public class AnalyticsAssociationPersistenceImpl
 		return findByPrimaryKey((Serializable)analyticsAssociationId);
 	}
 
-	/**
-	 * Returns the analytics association with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the analytics association
-	 * @return the analytics association, or <code>null</code> if a analytics association with the primary key could not be found
-	 */
 	@Override
-	public AnalyticsAssociation fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				AnalyticsAssociation.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		AnalyticsAssociation analyticsAssociation =
-			(AnalyticsAssociation)entityCache.getResult(
-				AnalyticsAssociationImpl.class, primaryKey);
-
-		if (analyticsAssociation != null) {
-			return analyticsAssociation;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			analyticsAssociation = (AnalyticsAssociation)session.get(
-				AnalyticsAssociationImpl.class, primaryKey);
-
-			if (analyticsAssociation != null) {
-				cacheResult(analyticsAssociation);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return analyticsAssociation;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1395,135 +1235,6 @@ public class AnalyticsAssociationPersistenceImpl
 	@Override
 	public AnalyticsAssociation fetchByPrimaryKey(long analyticsAssociationId) {
 		return fetchByPrimaryKey((Serializable)analyticsAssociationId);
-	}
-
-	@Override
-	public Map<Serializable, AnalyticsAssociation> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(AnalyticsAssociation.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, AnalyticsAssociation> map =
-			new HashMap<Serializable, AnalyticsAssociation>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			AnalyticsAssociation analyticsAssociation = fetchByPrimaryKey(
-				primaryKey);
-
-			if (analyticsAssociation != null) {
-				map.put(primaryKey, analyticsAssociation);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						AnalyticsAssociation.class, primaryKey)) {
-
-				AnalyticsAssociation analyticsAssociation =
-					(AnalyticsAssociation)entityCache.getResult(
-						AnalyticsAssociationImpl.class, primaryKey);
-
-				if (analyticsAssociation == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, analyticsAssociation);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (AnalyticsAssociation analyticsAssociation :
-					(List<AnalyticsAssociation>)query.list()) {
-
-				map.put(
-					analyticsAssociation.getPrimaryKeyObj(),
-					analyticsAssociation);
-
-				cacheResult(analyticsAssociation);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2063,9 +1774,6 @@ public class AnalyticsAssociationPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"analyticsAssociation.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No AnalyticsAssociation exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No AnalyticsAssociation exists with the key {";
 
@@ -2078,4 +1786,4 @@ public class AnalyticsAssociationPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-36177298
+// LIFERAY-SERVICE-BUILDER-HASH:-285138864

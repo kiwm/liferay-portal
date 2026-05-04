@@ -6,6 +6,7 @@
 import {
 	ObjectDefinition,
 	ObjectDefinitionAPI,
+	ObjectDefinitionSetting,
 	ObjectField,
 	ObjectFolder,
 	ObjectFolderAPI,
@@ -34,6 +35,14 @@ export class ObjectAdminApiHelper {
 		);
 	}
 
+	async getObjectDefinitionByName(name: string): Promise<ObjectDefinition> {
+		const {items} = await this.apiHelpers.get(
+			`${this.apiHelpers.baseUrl}${this.basePath}/object-definitions?filter=name eq '${name}'`
+		);
+
+		return items[0];
+	}
+
 	async postObjectDefinitionObjectFieldBatch(
 		objectDefinitionId: number,
 		objectFields: Partial<ObjectField>[]
@@ -48,6 +57,7 @@ export class ObjectAdminApiHelper {
 		className,
 		enableFriendlyURLCustomization,
 		objectDefinitionExternalReferenceCode = `ObjectDefinition${getRandomInt()}`,
+		objectDefinitionSettings,
 		objectFields,
 		objectFolderExternalReferenceCode,
 		panelCategoryKey,
@@ -58,6 +68,7 @@ export class ObjectAdminApiHelper {
 		className?: string;
 		enableFriendlyURLCustomization?: boolean;
 		objectDefinitionExternalReferenceCode?: string;
+		objectDefinitionSettings?: Partial<ObjectDefinitionSetting>[];
 		objectFields?: Partial<ObjectField>[];
 		objectFolderExternalReferenceCode?: string;
 		panelCategoryKey?: string;
@@ -74,6 +85,8 @@ export class ObjectAdminApiHelper {
 				en_US: objectDefinitionExternalReferenceCode,
 			},
 			name: objectDefinitionExternalReferenceCode,
+			objectDefinitionSettings:
+				objectDefinitionSettings as ObjectDefinitionSetting[],
 			objectFields: objectFields ?? [
 				{
 					DBType: 'String',

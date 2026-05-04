@@ -25,6 +25,7 @@ import com.liferay.portal.kernel.model.VirtualHost;
 import com.liferay.portal.kernel.model.VirtualHostTable;
 import com.liferay.portal.kernel.service.persistence.VirtualHostPersistence;
 import com.liferay.portal.kernel.service.persistence.VirtualHostUtil;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -47,9 +48,7 @@ import java.lang.reflect.InvocationHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -66,7 +65,8 @@ import java.util.Set;
  * @generated
  */
 public class VirtualHostPersistenceImpl
-	extends BasePersistenceImpl<VirtualHost> implements VirtualHostPersistence {
+	extends BasePersistenceImpl<VirtualHost, NoSuchVirtualHostException>
+	implements VirtualHostPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -1233,48 +1233,6 @@ public class VirtualHostPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all virtual hosts.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(VirtualHostImpl.class);
-
-		FinderCacheUtil.clearCache(VirtualHostImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the virtual host.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(VirtualHost virtualHost) {
-		EntityCacheUtil.removeResult(VirtualHostImpl.class, virtualHost);
-	}
-
-	@Override
-	public void clearCache(List<VirtualHost> virtualHosts) {
-		for (VirtualHost virtualHost : virtualHosts) {
-			EntityCacheUtil.removeResult(VirtualHostImpl.class, virtualHost);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(VirtualHostImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(VirtualHostImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		VirtualHostModelImpl virtualHostModelImpl) {
 
@@ -1317,47 +1275,6 @@ public class VirtualHostPersistenceImpl
 		throws NoSuchVirtualHostException {
 
 		return remove((Serializable)virtualHostId);
-	}
-
-	/**
-	 * Removes the virtual host with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the virtual host
-	 * @return the virtual host that was removed
-	 * @throws NoSuchVirtualHostException if a virtual host with the primary key could not be found
-	 */
-	@Override
-	public VirtualHost remove(Serializable primaryKey)
-		throws NoSuchVirtualHostException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			VirtualHost virtualHost = (VirtualHost)session.get(
-				VirtualHostImpl.class, primaryKey);
-
-			if (virtualHost == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchVirtualHostException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(virtualHost);
-		}
-		catch (NoSuchVirtualHostException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1454,31 +1371,6 @@ public class VirtualHostPersistenceImpl
 	}
 
 	/**
-	 * Returns the virtual host with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the virtual host
-	 * @return the virtual host
-	 * @throws NoSuchVirtualHostException if a virtual host with the primary key could not be found
-	 */
-	@Override
-	public VirtualHost findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchVirtualHostException {
-
-		VirtualHost virtualHost = fetchByPrimaryKey(primaryKey);
-
-		if (virtualHost == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchVirtualHostException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return virtualHost;
-	}
-
-	/**
 	 * Returns the virtual host with the primary key or throws a <code>NoSuchVirtualHostException</code> if it could not be found.
 	 *
 	 * @param virtualHostId the primary key of the virtual host
@@ -1492,52 +1384,9 @@ public class VirtualHostPersistenceImpl
 		return findByPrimaryKey((Serializable)virtualHostId);
 	}
 
-	/**
-	 * Returns the virtual host with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the virtual host
-	 * @return the virtual host, or <code>null</code> if a virtual host with the primary key could not be found
-	 */
 	@Override
-	public VirtualHost fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				VirtualHost.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		VirtualHost virtualHost = (VirtualHost)EntityCacheUtil.getResult(
-			VirtualHostImpl.class, primaryKey);
-
-		if (virtualHost != null) {
-			return virtualHost;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			virtualHost = (VirtualHost)session.get(
-				VirtualHostImpl.class, primaryKey);
-
-			if (virtualHost != null) {
-				cacheResult(virtualHost);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return virtualHost;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -1549,130 +1398,6 @@ public class VirtualHostPersistenceImpl
 	@Override
 	public VirtualHost fetchByPrimaryKey(long virtualHostId) {
 		return fetchByPrimaryKey((Serializable)virtualHostId);
-	}
-
-	@Override
-	public Map<Serializable, VirtualHost> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(VirtualHost.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, VirtualHost> map =
-			new HashMap<Serializable, VirtualHost>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			VirtualHost virtualHost = fetchByPrimaryKey(primaryKey);
-
-			if (virtualHost != null) {
-				map.put(primaryKey, virtualHost);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						VirtualHost.class, primaryKey)) {
-
-				VirtualHost virtualHost =
-					(VirtualHost)EntityCacheUtil.getResult(
-						VirtualHostImpl.class, primaryKey);
-
-				if (virtualHost == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, virtualHost);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (VirtualHost virtualHost : (List<VirtualHost>)query.list()) {
-				map.put(virtualHost.getPrimaryKeyObj(), virtualHost);
-
-				cacheResult(virtualHost);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2066,9 +1791,6 @@ public class VirtualHostPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "virtualHost.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No VirtualHost exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No VirtualHost exists with the key {";
 
@@ -2081,4 +1803,4 @@ public class VirtualHostPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1764223006
+// LIFERAY-SERVICE-BUILDER-HASH:-1414943563

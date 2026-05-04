@@ -64,7 +64,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -89,7 +88,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CPInstancePersistence.class)
 public class CPInstancePersistenceImpl
-	extends BasePersistenceImpl<CPInstance> implements CPInstancePersistence {
+	extends BasePersistenceImpl<CPInstance, NoSuchCPInstanceException>
+	implements CPInstancePersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -3003,48 +3003,6 @@ public class CPInstancePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all cp instances.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CPInstanceImpl.class);
-
-		finderCache.clearCache(CPInstanceImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the cp instance.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(CPInstance cpInstance) {
-		entityCache.removeResult(CPInstanceImpl.class, cpInstance);
-	}
-
-	@Override
-	public void clearCache(List<CPInstance> cpInstances) {
-		for (CPInstance cpInstance : cpInstances) {
-			entityCache.removeResult(CPInstanceImpl.class, cpInstance);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CPInstanceImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(CPInstanceImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		CPInstanceModelImpl cpInstanceModelImpl) {
 
@@ -3119,47 +3077,6 @@ public class CPInstancePersistenceImpl
 		throws NoSuchCPInstanceException {
 
 		return remove((Serializable)CPInstanceId);
-	}
-
-	/**
-	 * Removes the cp instance with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the cp instance
-	 * @return the cp instance that was removed
-	 * @throws NoSuchCPInstanceException if a cp instance with the primary key could not be found
-	 */
-	@Override
-	public CPInstance remove(Serializable primaryKey)
-		throws NoSuchCPInstanceException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CPInstance cpInstance = (CPInstance)session.get(
-				CPInstanceImpl.class, primaryKey);
-
-			if (cpInstance == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCPInstanceException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(cpInstance);
-		}
-		catch (NoSuchCPInstanceException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -3348,31 +3265,6 @@ public class CPInstancePersistenceImpl
 	}
 
 	/**
-	 * Returns the cp instance with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cp instance
-	 * @return the cp instance
-	 * @throws NoSuchCPInstanceException if a cp instance with the primary key could not be found
-	 */
-	@Override
-	public CPInstance findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCPInstanceException {
-
-		CPInstance cpInstance = fetchByPrimaryKey(primaryKey);
-
-		if (cpInstance == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCPInstanceException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return cpInstance;
-	}
-
-	/**
 	 * Returns the cp instance with the primary key or throws a <code>NoSuchCPInstanceException</code> if it could not be found.
 	 *
 	 * @param CPInstanceId the primary key of the cp instance
@@ -3386,52 +3278,9 @@ public class CPInstancePersistenceImpl
 		return findByPrimaryKey((Serializable)CPInstanceId);
 	}
 
-	/**
-	 * Returns the cp instance with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cp instance
-	 * @return the cp instance, or <code>null</code> if a cp instance with the primary key could not be found
-	 */
 	@Override
-	public CPInstance fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				CPInstance.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		CPInstance cpInstance = (CPInstance)entityCache.getResult(
-			CPInstanceImpl.class, primaryKey);
-
-		if (cpInstance != null) {
-			return cpInstance;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			cpInstance = (CPInstance)session.get(
-				CPInstanceImpl.class, primaryKey);
-
-			if (cpInstance != null) {
-				cacheResult(cpInstance);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return cpInstance;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -3443,129 +3292,6 @@ public class CPInstancePersistenceImpl
 	@Override
 	public CPInstance fetchByPrimaryKey(long CPInstanceId) {
 		return fetchByPrimaryKey((Serializable)CPInstanceId);
-	}
-
-	@Override
-	public Map<Serializable, CPInstance> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(CPInstance.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, CPInstance> map =
-			new HashMap<Serializable, CPInstance>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			CPInstance cpInstance = fetchByPrimaryKey(primaryKey);
-
-			if (cpInstance != null) {
-				map.put(primaryKey, cpInstance);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						CPInstance.class, primaryKey)) {
-
-				CPInstance cpInstance = (CPInstance)entityCache.getResult(
-					CPInstanceImpl.class, primaryKey);
-
-				if (cpInstance == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, cpInstance);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (CPInstance cpInstance : (List<CPInstance>)query.list()) {
-				map.put(cpInstance.getPrimaryKeyObj(), cpInstance);
-
-				cacheResult(cpInstance);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -4425,9 +4151,6 @@ public class CPInstancePersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "CPInstance.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CPInstance exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CPInstance exists with the key {";
 
@@ -4443,4 +4166,4 @@ public class CPInstancePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:679845760
+// LIFERAY-SERVICE-BUILDER-HASH:-1308998705

@@ -25,6 +25,7 @@ import com.liferay.portal.kernel.dao.orm.Session;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -45,9 +46,7 @@ import java.lang.reflect.InvocationHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,7 +62,7 @@ import java.util.Set;
  * @generated
  */
 public class ExpandoTablePersistenceImpl
-	extends BasePersistenceImpl<ExpandoTable>
+	extends BasePersistenceImpl<ExpandoTable, NoSuchTableException>
 	implements ExpandoTablePersistence {
 
 	/*
@@ -427,48 +426,6 @@ public class ExpandoTablePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all expando tables.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(ExpandoTableImpl.class);
-
-		FinderCacheUtil.clearCache(ExpandoTableImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the expando table.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(ExpandoTable expandoTable) {
-		EntityCacheUtil.removeResult(ExpandoTableImpl.class, expandoTable);
-	}
-
-	@Override
-	public void clearCache(List<ExpandoTable> expandoTables) {
-		for (ExpandoTable expandoTable : expandoTables) {
-			EntityCacheUtil.removeResult(ExpandoTableImpl.class, expandoTable);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(ExpandoTableImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(ExpandoTableImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		ExpandoTableModelImpl expandoTableModelImpl) {
 
@@ -515,47 +472,6 @@ public class ExpandoTablePersistenceImpl
 	@Override
 	public ExpandoTable remove(long tableId) throws NoSuchTableException {
 		return remove((Serializable)tableId);
-	}
-
-	/**
-	 * Removes the expando table with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the expando table
-	 * @return the expando table that was removed
-	 * @throws NoSuchTableException if a expando table with the primary key could not be found
-	 */
-	@Override
-	public ExpandoTable remove(Serializable primaryKey)
-		throws NoSuchTableException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ExpandoTable expandoTable = (ExpandoTable)session.get(
-				ExpandoTableImpl.class, primaryKey);
-
-			if (expandoTable == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchTableException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(expandoTable);
-		}
-		catch (NoSuchTableException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -654,31 +570,6 @@ public class ExpandoTablePersistenceImpl
 	}
 
 	/**
-	 * Returns the expando table with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the expando table
-	 * @return the expando table
-	 * @throws NoSuchTableException if a expando table with the primary key could not be found
-	 */
-	@Override
-	public ExpandoTable findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchTableException {
-
-		ExpandoTable expandoTable = fetchByPrimaryKey(primaryKey);
-
-		if (expandoTable == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchTableException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return expandoTable;
-	}
-
-	/**
 	 * Returns the expando table with the primary key or throws a <code>NoSuchTableException</code> if it could not be found.
 	 *
 	 * @param tableId the primary key of the expando table
@@ -692,52 +583,9 @@ public class ExpandoTablePersistenceImpl
 		return findByPrimaryKey((Serializable)tableId);
 	}
 
-	/**
-	 * Returns the expando table with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the expando table
-	 * @return the expando table, or <code>null</code> if a expando table with the primary key could not be found
-	 */
 	@Override
-	public ExpandoTable fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				ExpandoTable.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		ExpandoTable expandoTable = (ExpandoTable)EntityCacheUtil.getResult(
-			ExpandoTableImpl.class, primaryKey);
-
-		if (expandoTable != null) {
-			return expandoTable;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			expandoTable = (ExpandoTable)session.get(
-				ExpandoTableImpl.class, primaryKey);
-
-			if (expandoTable != null) {
-				cacheResult(expandoTable);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return expandoTable;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -749,130 +597,6 @@ public class ExpandoTablePersistenceImpl
 	@Override
 	public ExpandoTable fetchByPrimaryKey(long tableId) {
 		return fetchByPrimaryKey((Serializable)tableId);
-	}
-
-	@Override
-	public Map<Serializable, ExpandoTable> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(ExpandoTable.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, ExpandoTable> map =
-			new HashMap<Serializable, ExpandoTable>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			ExpandoTable expandoTable = fetchByPrimaryKey(primaryKey);
-
-			if (expandoTable != null) {
-				map.put(primaryKey, expandoTable);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						ExpandoTable.class, primaryKey)) {
-
-				ExpandoTable expandoTable =
-					(ExpandoTable)EntityCacheUtil.getResult(
-						ExpandoTableImpl.class, primaryKey);
-
-				if (expandoTable == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, expandoTable);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (ExpandoTable expandoTable : (List<ExpandoTable>)query.list()) {
-				map.put(expandoTable.getPrimaryKeyObj(), expandoTable);
-
-				cacheResult(expandoTable);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1229,9 +953,6 @@ public class ExpandoTablePersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "expandoTable.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No ExpandoTable exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No ExpandoTable exists with the key {";
 
@@ -1244,4 +965,4 @@ public class ExpandoTablePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:695928807
+// LIFERAY-SERVICE-BUILDER-HASH:189528282

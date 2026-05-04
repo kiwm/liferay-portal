@@ -64,7 +64,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -89,7 +88,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = TemplateEntryPersistence.class)
 public class TemplateEntryPersistenceImpl
-	extends BasePersistenceImpl<TemplateEntry>
+	extends BasePersistenceImpl<TemplateEntry, NoSuchTemplateEntryException>
 	implements TemplateEntryPersistence {
 
 	/*
@@ -2348,48 +2347,6 @@ public class TemplateEntryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all template entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(TemplateEntryImpl.class);
-
-		finderCache.clearCache(TemplateEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the template entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(TemplateEntry templateEntry) {
-		entityCache.removeResult(TemplateEntryImpl.class, templateEntry);
-	}
-
-	@Override
-	public void clearCache(List<TemplateEntry> templateEntries) {
-		for (TemplateEntry templateEntry : templateEntries) {
-			entityCache.removeResult(TemplateEntryImpl.class, templateEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(TemplateEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(TemplateEntryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		TemplateEntryModelImpl templateEntryModelImpl) {
 
@@ -2454,47 +2411,6 @@ public class TemplateEntryPersistenceImpl
 		throws NoSuchTemplateEntryException {
 
 		return remove((Serializable)templateEntryId);
-	}
-
-	/**
-	 * Removes the template entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the template entry
-	 * @return the template entry that was removed
-	 * @throws NoSuchTemplateEntryException if a template entry with the primary key could not be found
-	 */
-	@Override
-	public TemplateEntry remove(Serializable primaryKey)
-		throws NoSuchTemplateEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			TemplateEntry templateEntry = (TemplateEntry)session.get(
-				TemplateEntryImpl.class, primaryKey);
-
-			if (templateEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchTemplateEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(templateEntry);
-		}
-		catch (NoSuchTemplateEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -2686,31 +2602,6 @@ public class TemplateEntryPersistenceImpl
 	}
 
 	/**
-	 * Returns the template entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the template entry
-	 * @return the template entry
-	 * @throws NoSuchTemplateEntryException if a template entry with the primary key could not be found
-	 */
-	@Override
-	public TemplateEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchTemplateEntryException {
-
-		TemplateEntry templateEntry = fetchByPrimaryKey(primaryKey);
-
-		if (templateEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchTemplateEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return templateEntry;
-	}
-
-	/**
 	 * Returns the template entry with the primary key or throws a <code>NoSuchTemplateEntryException</code> if it could not be found.
 	 *
 	 * @param templateEntryId the primary key of the template entry
@@ -2724,52 +2615,9 @@ public class TemplateEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)templateEntryId);
 	}
 
-	/**
-	 * Returns the template entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the template entry
-	 * @return the template entry, or <code>null</code> if a template entry with the primary key could not be found
-	 */
 	@Override
-	public TemplateEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				TemplateEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		TemplateEntry templateEntry = (TemplateEntry)entityCache.getResult(
-			TemplateEntryImpl.class, primaryKey);
-
-		if (templateEntry != null) {
-			return templateEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			templateEntry = (TemplateEntry)session.get(
-				TemplateEntryImpl.class, primaryKey);
-
-			if (templateEntry != null) {
-				cacheResult(templateEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return templateEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -2781,132 +2629,6 @@ public class TemplateEntryPersistenceImpl
 	@Override
 	public TemplateEntry fetchByPrimaryKey(long templateEntryId) {
 		return fetchByPrimaryKey((Serializable)templateEntryId);
-	}
-
-	@Override
-	public Map<Serializable, TemplateEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(TemplateEntry.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, TemplateEntry> map =
-			new HashMap<Serializable, TemplateEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			TemplateEntry templateEntry = fetchByPrimaryKey(primaryKey);
-
-			if (templateEntry != null) {
-				map.put(primaryKey, templateEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						TemplateEntry.class, primaryKey)) {
-
-				TemplateEntry templateEntry =
-					(TemplateEntry)entityCache.getResult(
-						TemplateEntryImpl.class, primaryKey);
-
-				if (templateEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, templateEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (TemplateEntry templateEntry :
-					(List<TemplateEntry>)query.list()) {
-
-				map.put(templateEntry.getPrimaryKeyObj(), templateEntry);
-
-				cacheResult(templateEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -3475,9 +3197,6 @@ public class TemplateEntryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "templateEntry.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No TemplateEntry exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No TemplateEntry exists with the key {";
 
@@ -3493,4 +3212,4 @@ public class TemplateEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:2033087994
+// LIFERAY-SERVICE-BUILDER-HASH:1178177938

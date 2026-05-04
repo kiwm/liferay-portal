@@ -66,7 +66,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -91,7 +90,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = SegmentsEntryPersistence.class)
 public class SegmentsEntryPersistenceImpl
-	extends BasePersistenceImpl<SegmentsEntry>
+	extends BasePersistenceImpl<SegmentsEntry, NoSuchEntryException>
 	implements SegmentsEntryPersistence {
 
 	/*
@@ -6273,48 +6272,6 @@ public class SegmentsEntryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all segments entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(SegmentsEntryImpl.class);
-
-		finderCache.clearCache(SegmentsEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the segments entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(SegmentsEntry segmentsEntry) {
-		entityCache.removeResult(SegmentsEntryImpl.class, segmentsEntry);
-	}
-
-	@Override
-	public void clearCache(List<SegmentsEntry> segmentsEntries) {
-		for (SegmentsEntry segmentsEntry : segmentsEntries) {
-			entityCache.removeResult(SegmentsEntryImpl.class, segmentsEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(SegmentsEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(SegmentsEntryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		SegmentsEntryModelImpl segmentsEntryModelImpl) {
 
@@ -6382,47 +6339,6 @@ public class SegmentsEntryPersistenceImpl
 		throws NoSuchEntryException {
 
 		return remove((Serializable)segmentsEntryId);
-	}
-
-	/**
-	 * Removes the segments entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the segments entry
-	 * @return the segments entry that was removed
-	 * @throws NoSuchEntryException if a segments entry with the primary key could not be found
-	 */
-	@Override
-	public SegmentsEntry remove(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			SegmentsEntry segmentsEntry = (SegmentsEntry)session.get(
-				SegmentsEntryImpl.class, primaryKey);
-
-			if (segmentsEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(segmentsEntry);
-		}
-		catch (NoSuchEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -6614,31 +6530,6 @@ public class SegmentsEntryPersistenceImpl
 	}
 
 	/**
-	 * Returns the segments entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the segments entry
-	 * @return the segments entry
-	 * @throws NoSuchEntryException if a segments entry with the primary key could not be found
-	 */
-	@Override
-	public SegmentsEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		SegmentsEntry segmentsEntry = fetchByPrimaryKey(primaryKey);
-
-		if (segmentsEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return segmentsEntry;
-	}
-
-	/**
 	 * Returns the segments entry with the primary key or throws a <code>NoSuchEntryException</code> if it could not be found.
 	 *
 	 * @param segmentsEntryId the primary key of the segments entry
@@ -6652,52 +6543,9 @@ public class SegmentsEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)segmentsEntryId);
 	}
 
-	/**
-	 * Returns the segments entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the segments entry
-	 * @return the segments entry, or <code>null</code> if a segments entry with the primary key could not be found
-	 */
 	@Override
-	public SegmentsEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				SegmentsEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		SegmentsEntry segmentsEntry = (SegmentsEntry)entityCache.getResult(
-			SegmentsEntryImpl.class, primaryKey);
-
-		if (segmentsEntry != null) {
-			return segmentsEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			segmentsEntry = (SegmentsEntry)session.get(
-				SegmentsEntryImpl.class, primaryKey);
-
-			if (segmentsEntry != null) {
-				cacheResult(segmentsEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return segmentsEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -6709,132 +6557,6 @@ public class SegmentsEntryPersistenceImpl
 	@Override
 	public SegmentsEntry fetchByPrimaryKey(long segmentsEntryId) {
 		return fetchByPrimaryKey((Serializable)segmentsEntryId);
-	}
-
-	@Override
-	public Map<Serializable, SegmentsEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(SegmentsEntry.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, SegmentsEntry> map =
-			new HashMap<Serializable, SegmentsEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			SegmentsEntry segmentsEntry = fetchByPrimaryKey(primaryKey);
-
-			if (segmentsEntry != null) {
-				map.put(primaryKey, segmentsEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						SegmentsEntry.class, primaryKey)) {
-
-				SegmentsEntry segmentsEntry =
-					(SegmentsEntry)entityCache.getResult(
-						SegmentsEntryImpl.class, primaryKey);
-
-				if (segmentsEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, segmentsEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (SegmentsEntry segmentsEntry :
-					(List<SegmentsEntry>)query.list()) {
-
-				map.put(segmentsEntry.getPrimaryKeyObj(), segmentsEntry);
-
-				cacheResult(segmentsEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -7517,9 +7239,6 @@ public class SegmentsEntryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "SegmentsEntry.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No SegmentsEntry exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No SegmentsEntry exists with the key {";
 
@@ -7535,4 +7254,4 @@ public class SegmentsEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1597153391
+// LIFERAY-SERVICE-BUILDER-HASH:2082566835

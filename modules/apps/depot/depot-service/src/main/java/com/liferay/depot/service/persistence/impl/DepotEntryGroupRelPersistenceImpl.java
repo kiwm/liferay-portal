@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = DepotEntryGroupRelPersistence.class)
 public class DepotEntryGroupRelPersistenceImpl
-	extends BasePersistenceImpl<DepotEntryGroupRel>
+	extends BasePersistenceImpl
+		<DepotEntryGroupRel, NoSuchEntryGroupRelException>
 	implements DepotEntryGroupRelPersistence {
 
 	/*
@@ -1529,50 +1529,6 @@ public class DepotEntryGroupRelPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all depot entry group rels.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(DepotEntryGroupRelImpl.class);
-
-		finderCache.clearCache(DepotEntryGroupRelImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the depot entry group rel.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DepotEntryGroupRel depotEntryGroupRel) {
-		entityCache.removeResult(
-			DepotEntryGroupRelImpl.class, depotEntryGroupRel);
-	}
-
-	@Override
-	public void clearCache(List<DepotEntryGroupRel> depotEntryGroupRels) {
-		for (DepotEntryGroupRel depotEntryGroupRel : depotEntryGroupRels) {
-			entityCache.removeResult(
-				DepotEntryGroupRelImpl.class, depotEntryGroupRel);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(DepotEntryGroupRelImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(DepotEntryGroupRelImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DepotEntryGroupRelModelImpl depotEntryGroupRelModelImpl) {
 
@@ -1632,48 +1588,6 @@ public class DepotEntryGroupRelPersistenceImpl
 		throws NoSuchEntryGroupRelException {
 
 		return remove((Serializable)depotEntryGroupRelId);
-	}
-
-	/**
-	 * Removes the depot entry group rel with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the depot entry group rel
-	 * @return the depot entry group rel that was removed
-	 * @throws NoSuchEntryGroupRelException if a depot entry group rel with the primary key could not be found
-	 */
-	@Override
-	public DepotEntryGroupRel remove(Serializable primaryKey)
-		throws NoSuchEntryGroupRelException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DepotEntryGroupRel depotEntryGroupRel =
-				(DepotEntryGroupRel)session.get(
-					DepotEntryGroupRelImpl.class, primaryKey);
-
-			if (depotEntryGroupRel == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEntryGroupRelException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(depotEntryGroupRel);
-		}
-		catch (NoSuchEntryGroupRelException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1810,31 +1724,6 @@ public class DepotEntryGroupRelPersistenceImpl
 	}
 
 	/**
-	 * Returns the depot entry group rel with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the depot entry group rel
-	 * @return the depot entry group rel
-	 * @throws NoSuchEntryGroupRelException if a depot entry group rel with the primary key could not be found
-	 */
-	@Override
-	public DepotEntryGroupRel findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEntryGroupRelException {
-
-		DepotEntryGroupRel depotEntryGroupRel = fetchByPrimaryKey(primaryKey);
-
-		if (depotEntryGroupRel == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEntryGroupRelException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return depotEntryGroupRel;
-	}
-
-	/**
 	 * Returns the depot entry group rel with the primary key or throws a <code>NoSuchEntryGroupRelException</code> if it could not be found.
 	 *
 	 * @param depotEntryGroupRelId the primary key of the depot entry group rel
@@ -1848,53 +1737,9 @@ public class DepotEntryGroupRelPersistenceImpl
 		return findByPrimaryKey((Serializable)depotEntryGroupRelId);
 	}
 
-	/**
-	 * Returns the depot entry group rel with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the depot entry group rel
-	 * @return the depot entry group rel, or <code>null</code> if a depot entry group rel with the primary key could not be found
-	 */
 	@Override
-	public DepotEntryGroupRel fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				DepotEntryGroupRel.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DepotEntryGroupRel depotEntryGroupRel =
-			(DepotEntryGroupRel)entityCache.getResult(
-				DepotEntryGroupRelImpl.class, primaryKey);
-
-		if (depotEntryGroupRel != null) {
-			return depotEntryGroupRel;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			depotEntryGroupRel = (DepotEntryGroupRel)session.get(
-				DepotEntryGroupRelImpl.class, primaryKey);
-
-			if (depotEntryGroupRel != null) {
-				cacheResult(depotEntryGroupRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return depotEntryGroupRel;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1906,134 +1751,6 @@ public class DepotEntryGroupRelPersistenceImpl
 	@Override
 	public DepotEntryGroupRel fetchByPrimaryKey(long depotEntryGroupRelId) {
 		return fetchByPrimaryKey((Serializable)depotEntryGroupRelId);
-	}
-
-	@Override
-	public Map<Serializable, DepotEntryGroupRel> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(DepotEntryGroupRel.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DepotEntryGroupRel> map =
-			new HashMap<Serializable, DepotEntryGroupRel>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DepotEntryGroupRel depotEntryGroupRel = fetchByPrimaryKey(
-				primaryKey);
-
-			if (depotEntryGroupRel != null) {
-				map.put(primaryKey, depotEntryGroupRel);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						DepotEntryGroupRel.class, primaryKey)) {
-
-				DepotEntryGroupRel depotEntryGroupRel =
-					(DepotEntryGroupRel)entityCache.getResult(
-						DepotEntryGroupRelImpl.class, primaryKey);
-
-				if (depotEntryGroupRel == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, depotEntryGroupRel);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DepotEntryGroupRel depotEntryGroupRel :
-					(List<DepotEntryGroupRel>)query.list()) {
-
-				map.put(
-					depotEntryGroupRel.getPrimaryKeyObj(), depotEntryGroupRel);
-
-				cacheResult(depotEntryGroupRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2655,9 +2372,6 @@ public class DepotEntryGroupRelPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "depotEntryGroupRel.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DepotEntryGroupRel exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DepotEntryGroupRel exists with the key {";
 
@@ -2673,4 +2387,4 @@ public class DepotEntryGroupRelPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1152437614
+// LIFERAY-SERVICE-BUILDER-HASH:-474842027

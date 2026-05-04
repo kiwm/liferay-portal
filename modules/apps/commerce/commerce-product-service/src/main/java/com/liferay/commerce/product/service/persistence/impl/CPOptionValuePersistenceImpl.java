@@ -61,7 +61,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -86,7 +85,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CPOptionValuePersistence.class)
 public class CPOptionValuePersistenceImpl
-	extends BasePersistenceImpl<CPOptionValue>
+	extends BasePersistenceImpl<CPOptionValue, NoSuchCPOptionValueException>
 	implements CPOptionValuePersistence {
 
 	/*
@@ -1016,48 +1015,6 @@ public class CPOptionValuePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all cp option values.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CPOptionValueImpl.class);
-
-		finderCache.clearCache(CPOptionValueImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the cp option value.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(CPOptionValue cpOptionValue) {
-		entityCache.removeResult(CPOptionValueImpl.class, cpOptionValue);
-	}
-
-	@Override
-	public void clearCache(List<CPOptionValue> cpOptionValues) {
-		for (CPOptionValue cpOptionValue : cpOptionValues) {
-			entityCache.removeResult(CPOptionValueImpl.class, cpOptionValue);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CPOptionValueImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(CPOptionValueImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		CPOptionValueModelImpl cpOptionValueModelImpl) {
 
@@ -1117,47 +1074,6 @@ public class CPOptionValuePersistenceImpl
 		throws NoSuchCPOptionValueException {
 
 		return remove((Serializable)CPOptionValueId);
-	}
-
-	/**
-	 * Removes the cp option value with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the cp option value
-	 * @return the cp option value that was removed
-	 * @throws NoSuchCPOptionValueException if a cp option value with the primary key could not be found
-	 */
-	@Override
-	public CPOptionValue remove(Serializable primaryKey)
-		throws NoSuchCPOptionValueException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CPOptionValue cpOptionValue = (CPOptionValue)session.get(
-				CPOptionValueImpl.class, primaryKey);
-
-			if (cpOptionValue == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCPOptionValueException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(cpOptionValue);
-		}
-		catch (NoSuchCPOptionValueException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1349,31 +1265,6 @@ public class CPOptionValuePersistenceImpl
 	}
 
 	/**
-	 * Returns the cp option value with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cp option value
-	 * @return the cp option value
-	 * @throws NoSuchCPOptionValueException if a cp option value with the primary key could not be found
-	 */
-	@Override
-	public CPOptionValue findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCPOptionValueException {
-
-		CPOptionValue cpOptionValue = fetchByPrimaryKey(primaryKey);
-
-		if (cpOptionValue == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCPOptionValueException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return cpOptionValue;
-	}
-
-	/**
 	 * Returns the cp option value with the primary key or throws a <code>NoSuchCPOptionValueException</code> if it could not be found.
 	 *
 	 * @param CPOptionValueId the primary key of the cp option value
@@ -1387,52 +1278,9 @@ public class CPOptionValuePersistenceImpl
 		return findByPrimaryKey((Serializable)CPOptionValueId);
 	}
 
-	/**
-	 * Returns the cp option value with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cp option value
-	 * @return the cp option value, or <code>null</code> if a cp option value with the primary key could not be found
-	 */
 	@Override
-	public CPOptionValue fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				CPOptionValue.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		CPOptionValue cpOptionValue = (CPOptionValue)entityCache.getResult(
-			CPOptionValueImpl.class, primaryKey);
-
-		if (cpOptionValue != null) {
-			return cpOptionValue;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			cpOptionValue = (CPOptionValue)session.get(
-				CPOptionValueImpl.class, primaryKey);
-
-			if (cpOptionValue != null) {
-				cacheResult(cpOptionValue);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return cpOptionValue;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1444,132 +1292,6 @@ public class CPOptionValuePersistenceImpl
 	@Override
 	public CPOptionValue fetchByPrimaryKey(long CPOptionValueId) {
 		return fetchByPrimaryKey((Serializable)CPOptionValueId);
-	}
-
-	@Override
-	public Map<Serializable, CPOptionValue> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(CPOptionValue.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, CPOptionValue> map =
-			new HashMap<Serializable, CPOptionValue>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			CPOptionValue cpOptionValue = fetchByPrimaryKey(primaryKey);
-
-			if (cpOptionValue != null) {
-				map.put(primaryKey, cpOptionValue);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						CPOptionValue.class, primaryKey)) {
-
-				CPOptionValue cpOptionValue =
-					(CPOptionValue)entityCache.getResult(
-						CPOptionValueImpl.class, primaryKey);
-
-				if (cpOptionValue == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, cpOptionValue);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (CPOptionValue cpOptionValue :
-					(List<CPOptionValue>)query.list()) {
-
-				map.put(cpOptionValue.getPrimaryKeyObj(), cpOptionValue);
-
-				cacheResult(cpOptionValue);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2082,9 +1804,6 @@ public class CPOptionValuePersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "cpOptionValue.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CPOptionValue exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CPOptionValue exists with the key {";
 
@@ -2100,4 +1819,4 @@ public class CPOptionValuePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:260488579
+// LIFERAY-SERVICE-BUILDER-HASH:-675665933

@@ -250,7 +250,7 @@ import org.osgi.service.component.annotations.Reference;
 <#if classDeprecated>
 	@Deprecated
 </#if>
-public class ${entity.name}PersistenceImpl extends BasePersistenceImpl<${entity.name}> implements ${entity.name}Persistence {
+public class ${entity.name}PersistenceImpl extends BasePersistenceImpl<${entity.name}<#if serviceBuilder.isVersionGTE_7_4_0()>, ${noSuchEntity}Exception</#if>> implements ${entity.name}Persistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -485,89 +485,91 @@ public class ${entity.name}PersistenceImpl extends BasePersistenceImpl<${entity.
 		}
 	}
 
-	/**
-	 * Clears the cache for all ${entity.pluralHumanName}.
-	 *
-	 * <p>
-	 * The <code>com.liferay.portal.kernel.dao.orm.EntityCache</code> and <code>com.liferay.portal.kernel.dao.orm.FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		${entityCache}.clearCache(${entity.name}Impl.class);
+	<#if !serviceBuilder.isVersionGTE_7_4_0()>
+		/**
+		 * Clears the cache for all ${entity.pluralHumanName}.
+		 *
+		 * <p>
+		 * The <code>com.liferay.portal.kernel.dao.orm.EntityCache</code> and <code>com.liferay.portal.kernel.dao.orm.FinderCache</code> are both cleared by this method.
+		 * </p>
+		 */
+		@Override
+		public void clearCache() {
+			${entityCache}.clearCache(${entity.name}Impl.class);
 
-		<#if serviceBuilder.isVersionGTE_7_4_0()>
-			${finderCache}.clearCache(${entity.name}Impl.class);
-		<#else>
-			${finderCache}.clearCache(FINDER_CLASS_NAME_ENTITY);
-			${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITH_PAGINATION);
-			${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION);
-		</#if>
-	}
-
-	/**
-	 * Clears the cache for the ${entity.humanName}.
-	 *
-	 * <p>
-	 * The <code>com.liferay.portal.kernel.dao.orm.EntityCache</code> and <code>com.liferay.portal.kernel.dao.orm.FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(${entity.name} ${entity.variableName}) {
-		<#if serviceBuilder.isVersionGTE_7_3_0()>
-			${entityCache}.removeResult(${entity.name}Impl.class, ${entity.variableName});
-		<#else>
-			${entityCache}.removeResult(${entityCacheEnabled}, ${entity.name}Impl.class, ${entity.variableName}.getPrimaryKey());
-
-			${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITH_PAGINATION);
-			${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION);
-
-			<#if entity.uniqueEntityFinders?size &gt; 0>
-				clearUniqueFindersCache((${entity.name}ModelImpl)${entity.variableName}, true);
+			<#if serviceBuilder.isVersionGTE_7_4_0()>
+				${finderCache}.clearCache(${entity.name}Impl.class);
+			<#else>
+				${finderCache}.clearCache(FINDER_CLASS_NAME_ENTITY);
+				${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITH_PAGINATION);
+				${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION);
 			</#if>
-		</#if>
-	}
+		}
 
-	@Override
-	public void clearCache(List<${entity.name}> ${entity.pluralVariableName}) {
-		<#if serviceBuilder.isVersionLTE_7_2_0()>
-			${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITH_PAGINATION);
-			${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION);
-		</#if>
-
-		for (${entity.name} ${entity.variableName} : ${entity.pluralVariableName}) {
+		/**
+		 * Clears the cache for the ${entity.humanName}.
+		 *
+		 * <p>
+		 * The <code>com.liferay.portal.kernel.dao.orm.EntityCache</code> and <code>com.liferay.portal.kernel.dao.orm.FinderCache</code> are both cleared by this method.
+		 * </p>
+		 */
+		@Override
+		public void clearCache(${entity.name} ${entity.variableName}) {
 			<#if serviceBuilder.isVersionGTE_7_3_0()>
 				${entityCache}.removeResult(${entity.name}Impl.class, ${entity.variableName});
 			<#else>
 				${entityCache}.removeResult(${entityCacheEnabled}, ${entity.name}Impl.class, ${entity.variableName}.getPrimaryKey());
+
+				${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITH_PAGINATION);
+				${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION);
 
 				<#if entity.uniqueEntityFinders?size &gt; 0>
 					clearUniqueFindersCache((${entity.name}ModelImpl)${entity.variableName}, true);
 				</#if>
 			</#if>
 		}
-	}
 
-	<#if serviceBuilder.isVersionGTE_7_3_0()>
 		@Override
-	</#if>
-	public void clearCache(Set<Serializable> primaryKeys) {
-		<#if serviceBuilder.isVersionGTE_7_4_0()>
-			${finderCache}.clearCache(${entity.name}Impl.class);
-		<#else>
-			${finderCache}.clearCache(FINDER_CLASS_NAME_ENTITY);
-			${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITH_PAGINATION);
-			${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION);
-		</#if>
+		public void clearCache(List<${entity.name}> ${entity.pluralVariableName}) {
+			<#if serviceBuilder.isVersionLTE_7_2_0()>
+				${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITH_PAGINATION);
+				${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION);
+			</#if>
 
-		for (Serializable primaryKey : primaryKeys) {
-			${entityCache}.removeResult(
-				<#if serviceBuilder.isVersionLTE_7_2_0()>
-					${entityCacheEnabled},
+			for (${entity.name} ${entity.variableName} : ${entity.pluralVariableName}) {
+				<#if serviceBuilder.isVersionGTE_7_3_0()>
+					${entityCache}.removeResult(${entity.name}Impl.class, ${entity.variableName});
+				<#else>
+					${entityCache}.removeResult(${entityCacheEnabled}, ${entity.name}Impl.class, ${entity.variableName}.getPrimaryKey());
+
+					<#if entity.uniqueEntityFinders?size &gt; 0>
+						clearUniqueFindersCache((${entity.name}ModelImpl)${entity.variableName}, true);
+					</#if>
 				</#if>
-				${entity.name}Impl.class, primaryKey);
+			}
 		}
-	}
+
+		<#if serviceBuilder.isVersionGTE_7_3_0()>
+			@Override
+		</#if>
+		public void clearCache(Set<Serializable> primaryKeys) {
+			<#if serviceBuilder.isVersionGTE_7_4_0()>
+				${finderCache}.clearCache(${entity.name}Impl.class);
+			<#else>
+				${finderCache}.clearCache(FINDER_CLASS_NAME_ENTITY);
+				${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITH_PAGINATION);
+				${finderCache}.clearCache(FINDER_CLASS_NAME_LIST_WITHOUT_PAGINATION);
+			</#if>
+
+			for (Serializable primaryKey : primaryKeys) {
+				${entityCache}.removeResult(
+					<#if serviceBuilder.isVersionLTE_7_2_0()>
+						${entityCacheEnabled},
+					</#if>
+					${entity.name}Impl.class, primaryKey);
+			}
+		}
+	</#if>
 
 	<#if entity.uniqueEntityFinders?size &gt; 0>
 		protected void cacheUniqueFindersCache(${entity.name}ModelImpl ${entity.variableName}ModelImpl) {
@@ -721,42 +723,44 @@ public class ${entity.name}PersistenceImpl extends BasePersistenceImpl<${entity.
 		return remove((Serializable)${entity.PKVariableName});
 	}
 
-	/**
-	 * Removes the ${entity.humanName} with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the ${entity.humanName}
-	 * @return the ${entity.humanName} that was removed
-	 * @throws ${noSuchEntity}Exception if a ${entity.humanName} with the primary key could not be found
-	 */
-	@Override
-	public ${entity.name} remove(Serializable primaryKey) throws ${noSuchEntity}Exception {
-		Session session = null;
+	<#if !serviceBuilder.isVersionGTE_7_4_0()>
+		/**
+		 * Removes the ${entity.humanName} with the primary key from the database. Also notifies the appropriate model listeners.
+		 *
+		 * @param primaryKey the primary key of the ${entity.humanName}
+		 * @return the ${entity.humanName} that was removed
+		 * @throws ${noSuchEntity}Exception if a ${entity.humanName} with the primary key could not be found
+		 */
+		@Override
+		public ${entity.name} remove(Serializable primaryKey) throws ${noSuchEntity}Exception {
+			Session session = null;
 
-		try {
-			session = openSession();
+			try {
+				session = openSession();
 
-			${entity.name} ${entity.variableName} = (${entity.name})session.get(${entity.name}Impl.class, primaryKey);
+				${entity.name} ${entity.variableName} = (${entity.name})session.get(${entity.name}Impl.class, primaryKey);
 
-			if (${entity.variableName} == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
+				if (${entity.variableName} == null) {
+					if (_log.isDebugEnabled()) {
+						_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
+					}
+
+					throw new ${noSuchEntity}Exception(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
 				}
 
-				throw new ${noSuchEntity}Exception(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
+				return remove(${entity.variableName});
 			}
-
-			return remove(${entity.variableName});
+			catch (${noSuchEntity}Exception noSuchEntityException) {
+				throw noSuchEntityException;
+			}
+			catch (Exception exception) {
+				throw processException(exception);
+			}
+			finally {
+				closeSession(session);
+			}
 		}
-		catch (${noSuchEntity}Exception noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-	}
+	</#if>
 
 	@Override
 	protected ${entity.name} removeImpl(${entity.name} ${entity.variableName}) {
@@ -1241,27 +1245,29 @@ public class ${entity.name}PersistenceImpl extends BasePersistenceImpl<${entity.
 		return ${entity.variableName};
 	}
 
-	/**
-	 * Returns the ${entity.humanName} with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ${entity.humanName}
-	 * @return the ${entity.humanName}
-	 * @throws ${noSuchEntity}Exception if a ${entity.humanName} with the primary key could not be found
-	 */
-	@Override
-	public ${entity.name} findByPrimaryKey(Serializable primaryKey) throws ${noSuchEntity}Exception {
-		${entity.name} ${entity.variableName} = fetchByPrimaryKey(primaryKey);
+	<#if !serviceBuilder.isVersionGTE_7_4_0()>
+		/**
+		 * Returns the ${entity.humanName} with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
+		 *
+		 * @param primaryKey the primary key of the ${entity.humanName}
+		 * @return the ${entity.humanName}
+		 * @throws ${noSuchEntity}Exception if a ${entity.humanName} with the primary key could not be found
+		 */
+		@Override
+		public ${entity.name} findByPrimaryKey(Serializable primaryKey) throws ${noSuchEntity}Exception {
+			${entity.name} ${entity.variableName} = fetchByPrimaryKey(primaryKey);
 
-		if (${entity.variableName} == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
+			if (${entity.variableName} == null) {
+				if (_log.isDebugEnabled()) {
+					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
+				}
+
+				throw new ${noSuchEntity}Exception(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
 			}
 
-			throw new ${noSuchEntity}Exception(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
+			return ${entity.variableName};
 		}
-
-		return ${entity.variableName};
-	}
+	</#if>
 
 	/**
 	 * Returns the ${entity.humanName} with the primary key or throws a <code>${noSuchEntity}Exception</code> if it could not be found.
@@ -1321,7 +1327,7 @@ public class ${entity.name}PersistenceImpl extends BasePersistenceImpl<${entity.
 
 			return ${entity.variableName};
 		}
-	<#elseif entity.isChangeTrackingEnabled()>
+	<#elseif entity.isChangeTrackingEnabled() && !serviceBuilder.isVersionGTE_7_4_0()>
 		/**
 		 * Returns the ${entity.humanName} with the primary key or returns <code>null</code> if it could not be found.
 		 *
@@ -1361,6 +1367,17 @@ public class ${entity.name}PersistenceImpl extends BasePersistenceImpl<${entity.
 			}
 
 			return ${entity.variableName};
+		}
+	</#if>
+
+	<#if entity.isChangeTrackingEnabled() && serviceBuilder.isVersionGTE_7_4_0()>
+		@Override
+		protected CTPersistenceHelper getCTPersistenceHelper() {
+			<#if osgiModule>
+				return ctPersistenceHelper;
+			<#else>
+				return CTPersistenceHelperUtil.getCTPersistenceHelper();
+			</#if>
 		}
 	</#if>
 
@@ -1509,7 +1526,7 @@ public class ${entity.name}PersistenceImpl extends BasePersistenceImpl<${entity.
 				return map;
 			</#if>
 		}
-	<#elseif entity.isChangeTrackingEnabled()>
+	<#elseif entity.isChangeTrackingEnabled() && !serviceBuilder.isVersionGTE_7_4_0()>
 		@Override
 		public Map<Serializable, ${entity.name}> fetchByPrimaryKeys(Set<Serializable> primaryKeys) {
 			if (${ctPersistenceHelper}.isProductionMode(${entity.name}.class)) {
@@ -3282,7 +3299,9 @@ public class ${entity.name}PersistenceImpl extends BasePersistenceImpl<${entity.
 		private static final String _ORDER_BY_ENTITY_TABLE = "${entity.table}.";
 	</#if>
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY = "No ${entity.name} exists with the primary key ";
+	<#if !serviceBuilder.isVersionGTE_7_4_0()>
+		private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY = "No ${entity.name} exists with the primary key ";
+	</#if>
 
 	<#if entity.entityFinders?size != 0>
 		private static final String _NO_SUCH_ENTITY_WITH_KEY = "No ${entity.name} exists with the key {";

@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = MBMailingListPersistence.class)
 public class MBMailingListPersistenceImpl
-	extends BasePersistenceImpl<MBMailingList>
+	extends BasePersistenceImpl<MBMailingList, NoSuchMailingListException>
 	implements MBMailingListPersistence {
 
 	/*
@@ -843,48 +842,6 @@ public class MBMailingListPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all message boards mailing lists.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(MBMailingListImpl.class);
-
-		finderCache.clearCache(MBMailingListImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the message boards mailing list.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(MBMailingList mbMailingList) {
-		entityCache.removeResult(MBMailingListImpl.class, mbMailingList);
-	}
-
-	@Override
-	public void clearCache(List<MBMailingList> mbMailingLists) {
-		for (MBMailingList mbMailingList : mbMailingLists) {
-			entityCache.removeResult(MBMailingListImpl.class, mbMailingList);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(MBMailingListImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(MBMailingListImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		MBMailingListModelImpl mbMailingListModelImpl) {
 
@@ -944,47 +901,6 @@ public class MBMailingListPersistenceImpl
 		throws NoSuchMailingListException {
 
 		return remove((Serializable)mailingListId);
-	}
-
-	/**
-	 * Removes the message boards mailing list with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the message boards mailing list
-	 * @return the message boards mailing list that was removed
-	 * @throws NoSuchMailingListException if a message boards mailing list with the primary key could not be found
-	 */
-	@Override
-	public MBMailingList remove(Serializable primaryKey)
-		throws NoSuchMailingListException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			MBMailingList mbMailingList = (MBMailingList)session.get(
-				MBMailingListImpl.class, primaryKey);
-
-			if (mbMailingList == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchMailingListException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(mbMailingList);
-		}
-		catch (NoSuchMailingListException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1113,31 +1029,6 @@ public class MBMailingListPersistenceImpl
 	}
 
 	/**
-	 * Returns the message boards mailing list with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the message boards mailing list
-	 * @return the message boards mailing list
-	 * @throws NoSuchMailingListException if a message boards mailing list with the primary key could not be found
-	 */
-	@Override
-	public MBMailingList findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchMailingListException {
-
-		MBMailingList mbMailingList = fetchByPrimaryKey(primaryKey);
-
-		if (mbMailingList == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchMailingListException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return mbMailingList;
-	}
-
-	/**
 	 * Returns the message boards mailing list with the primary key or throws a <code>NoSuchMailingListException</code> if it could not be found.
 	 *
 	 * @param mailingListId the primary key of the message boards mailing list
@@ -1151,52 +1042,9 @@ public class MBMailingListPersistenceImpl
 		return findByPrimaryKey((Serializable)mailingListId);
 	}
 
-	/**
-	 * Returns the message boards mailing list with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the message boards mailing list
-	 * @return the message boards mailing list, or <code>null</code> if a message boards mailing list with the primary key could not be found
-	 */
 	@Override
-	public MBMailingList fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				MBMailingList.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		MBMailingList mbMailingList = (MBMailingList)entityCache.getResult(
-			MBMailingListImpl.class, primaryKey);
-
-		if (mbMailingList != null) {
-			return mbMailingList;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			mbMailingList = (MBMailingList)session.get(
-				MBMailingListImpl.class, primaryKey);
-
-			if (mbMailingList != null) {
-				cacheResult(mbMailingList);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return mbMailingList;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1208,132 +1056,6 @@ public class MBMailingListPersistenceImpl
 	@Override
 	public MBMailingList fetchByPrimaryKey(long mailingListId) {
 		return fetchByPrimaryKey((Serializable)mailingListId);
-	}
-
-	@Override
-	public Map<Serializable, MBMailingList> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(MBMailingList.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, MBMailingList> map =
-			new HashMap<Serializable, MBMailingList>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			MBMailingList mbMailingList = fetchByPrimaryKey(primaryKey);
-
-			if (mbMailingList != null) {
-				map.put(primaryKey, mbMailingList);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						MBMailingList.class, primaryKey)) {
-
-				MBMailingList mbMailingList =
-					(MBMailingList)entityCache.getResult(
-						MBMailingListImpl.class, primaryKey);
-
-				if (mbMailingList == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, mbMailingList);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (MBMailingList mbMailingList :
-					(List<MBMailingList>)query.list()) {
-
-				map.put(mbMailingList.getPrimaryKeyObj(), mbMailingList);
-
-				cacheResult(mbMailingList);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1827,9 +1549,6 @@ public class MBMailingListPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "mbMailingList.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No MBMailingList exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No MBMailingList exists with the key {";
 
@@ -1845,4 +1564,4 @@ public class MBMailingListPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1446545913
+// LIFERAY-SERVICE-BUILDER-HASH:-2010635854

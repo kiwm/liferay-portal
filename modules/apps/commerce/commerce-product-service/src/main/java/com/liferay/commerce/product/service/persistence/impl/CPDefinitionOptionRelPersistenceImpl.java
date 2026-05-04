@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CPDefinitionOptionRelPersistence.class)
 public class CPDefinitionOptionRelPersistenceImpl
-	extends BasePersistenceImpl<CPDefinitionOptionRel>
+	extends BasePersistenceImpl
+		<CPDefinitionOptionRel, NoSuchCPDefinitionOptionRelException>
 	implements CPDefinitionOptionRelPersistence {
 
 	/*
@@ -1796,53 +1796,6 @@ public class CPDefinitionOptionRelPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all cp definition option rels.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CPDefinitionOptionRelImpl.class);
-
-		finderCache.clearCache(CPDefinitionOptionRelImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the cp definition option rel.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(CPDefinitionOptionRel cpDefinitionOptionRel) {
-		entityCache.removeResult(
-			CPDefinitionOptionRelImpl.class, cpDefinitionOptionRel);
-	}
-
-	@Override
-	public void clearCache(List<CPDefinitionOptionRel> cpDefinitionOptionRels) {
-		for (CPDefinitionOptionRel cpDefinitionOptionRel :
-				cpDefinitionOptionRels) {
-
-			entityCache.removeResult(
-				CPDefinitionOptionRelImpl.class, cpDefinitionOptionRel);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CPDefinitionOptionRelImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				CPDefinitionOptionRelImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		CPDefinitionOptionRelModelImpl cpDefinitionOptionRelModelImpl) {
 
@@ -1911,48 +1864,6 @@ public class CPDefinitionOptionRelPersistenceImpl
 		throws NoSuchCPDefinitionOptionRelException {
 
 		return remove((Serializable)CPDefinitionOptionRelId);
-	}
-
-	/**
-	 * Removes the cp definition option rel with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the cp definition option rel
-	 * @return the cp definition option rel that was removed
-	 * @throws NoSuchCPDefinitionOptionRelException if a cp definition option rel with the primary key could not be found
-	 */
-	@Override
-	public CPDefinitionOptionRel remove(Serializable primaryKey)
-		throws NoSuchCPDefinitionOptionRelException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CPDefinitionOptionRel cpDefinitionOptionRel =
-				(CPDefinitionOptionRel)session.get(
-					CPDefinitionOptionRelImpl.class, primaryKey);
-
-			if (cpDefinitionOptionRel == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCPDefinitionOptionRelException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(cpDefinitionOptionRel);
-		}
-		catch (NoSuchCPDefinitionOptionRelException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -2091,32 +2002,6 @@ public class CPDefinitionOptionRelPersistenceImpl
 	}
 
 	/**
-	 * Returns the cp definition option rel with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cp definition option rel
-	 * @return the cp definition option rel
-	 * @throws NoSuchCPDefinitionOptionRelException if a cp definition option rel with the primary key could not be found
-	 */
-	@Override
-	public CPDefinitionOptionRel findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCPDefinitionOptionRelException {
-
-		CPDefinitionOptionRel cpDefinitionOptionRel = fetchByPrimaryKey(
-			primaryKey);
-
-		if (cpDefinitionOptionRel == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCPDefinitionOptionRelException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return cpDefinitionOptionRel;
-	}
-
-	/**
 	 * Returns the cp definition option rel with the primary key or throws a <code>NoSuchCPDefinitionOptionRelException</code> if it could not be found.
 	 *
 	 * @param CPDefinitionOptionRelId the primary key of the cp definition option rel
@@ -2130,53 +2015,9 @@ public class CPDefinitionOptionRelPersistenceImpl
 		return findByPrimaryKey((Serializable)CPDefinitionOptionRelId);
 	}
 
-	/**
-	 * Returns the cp definition option rel with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cp definition option rel
-	 * @return the cp definition option rel, or <code>null</code> if a cp definition option rel with the primary key could not be found
-	 */
 	@Override
-	public CPDefinitionOptionRel fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				CPDefinitionOptionRel.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		CPDefinitionOptionRel cpDefinitionOptionRel =
-			(CPDefinitionOptionRel)entityCache.getResult(
-				CPDefinitionOptionRelImpl.class, primaryKey);
-
-		if (cpDefinitionOptionRel != null) {
-			return cpDefinitionOptionRel;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			cpDefinitionOptionRel = (CPDefinitionOptionRel)session.get(
-				CPDefinitionOptionRelImpl.class, primaryKey);
-
-			if (cpDefinitionOptionRel != null) {
-				cacheResult(cpDefinitionOptionRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return cpDefinitionOptionRel;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -2190,135 +2031,6 @@ public class CPDefinitionOptionRelPersistenceImpl
 		long CPDefinitionOptionRelId) {
 
 		return fetchByPrimaryKey((Serializable)CPDefinitionOptionRelId);
-	}
-
-	@Override
-	public Map<Serializable, CPDefinitionOptionRel> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(CPDefinitionOptionRel.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, CPDefinitionOptionRel> map =
-			new HashMap<Serializable, CPDefinitionOptionRel>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			CPDefinitionOptionRel cpDefinitionOptionRel = fetchByPrimaryKey(
-				primaryKey);
-
-			if (cpDefinitionOptionRel != null) {
-				map.put(primaryKey, cpDefinitionOptionRel);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						CPDefinitionOptionRel.class, primaryKey)) {
-
-				CPDefinitionOptionRel cpDefinitionOptionRel =
-					(CPDefinitionOptionRel)entityCache.getResult(
-						CPDefinitionOptionRelImpl.class, primaryKey);
-
-				if (cpDefinitionOptionRel == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, cpDefinitionOptionRel);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (CPDefinitionOptionRel cpDefinitionOptionRel :
-					(List<CPDefinitionOptionRel>)query.list()) {
-
-				map.put(
-					cpDefinitionOptionRel.getPrimaryKeyObj(),
-					cpDefinitionOptionRel);
-
-				cacheResult(cpDefinitionOptionRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -3010,9 +2722,6 @@ public class CPDefinitionOptionRelPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"cpDefinitionOptionRel.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CPDefinitionOptionRel exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CPDefinitionOptionRel exists with the key {";
 
@@ -3028,4 +2737,4 @@ public class CPDefinitionOptionRelPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-2057163858
+// LIFERAY-SERVICE-BUILDER-HASH:139764945

@@ -54,7 +54,6 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = DDMStorageLinkPersistence.class)
 public class DDMStorageLinkPersistenceImpl
-	extends BasePersistenceImpl<DDMStorageLink>
+	extends BasePersistenceImpl<DDMStorageLink, NoSuchStorageLinkException>
 	implements DDMStorageLinkPersistence {
 
 	/*
@@ -1392,48 +1391,6 @@ public class DDMStorageLinkPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all ddm storage links.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(DDMStorageLinkImpl.class);
-
-		finderCache.clearCache(DDMStorageLinkImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the ddm storage link.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DDMStorageLink ddmStorageLink) {
-		entityCache.removeResult(DDMStorageLinkImpl.class, ddmStorageLink);
-	}
-
-	@Override
-	public void clearCache(List<DDMStorageLink> ddmStorageLinks) {
-		for (DDMStorageLink ddmStorageLink : ddmStorageLinks) {
-			entityCache.removeResult(DDMStorageLinkImpl.class, ddmStorageLink);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(DDMStorageLinkImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(DDMStorageLinkImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DDMStorageLinkModelImpl ddmStorageLinkModelImpl) {
 
@@ -1482,47 +1439,6 @@ public class DDMStorageLinkPersistenceImpl
 		throws NoSuchStorageLinkException {
 
 		return remove((Serializable)storageLinkId);
-	}
-
-	/**
-	 * Removes the ddm storage link with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the ddm storage link
-	 * @return the ddm storage link that was removed
-	 * @throws NoSuchStorageLinkException if a ddm storage link with the primary key could not be found
-	 */
-	@Override
-	public DDMStorageLink remove(Serializable primaryKey)
-		throws NoSuchStorageLinkException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DDMStorageLink ddmStorageLink = (DDMStorageLink)session.get(
-				DDMStorageLinkImpl.class, primaryKey);
-
-			if (ddmStorageLink == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchStorageLinkException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(ddmStorageLink);
-		}
-		catch (NoSuchStorageLinkException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1628,31 +1544,6 @@ public class DDMStorageLinkPersistenceImpl
 	}
 
 	/**
-	 * Returns the ddm storage link with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm storage link
-	 * @return the ddm storage link
-	 * @throws NoSuchStorageLinkException if a ddm storage link with the primary key could not be found
-	 */
-	@Override
-	public DDMStorageLink findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchStorageLinkException {
-
-		DDMStorageLink ddmStorageLink = fetchByPrimaryKey(primaryKey);
-
-		if (ddmStorageLink == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchStorageLinkException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return ddmStorageLink;
-	}
-
-	/**
 	 * Returns the ddm storage link with the primary key or throws a <code>NoSuchStorageLinkException</code> if it could not be found.
 	 *
 	 * @param storageLinkId the primary key of the ddm storage link
@@ -1666,52 +1557,9 @@ public class DDMStorageLinkPersistenceImpl
 		return findByPrimaryKey((Serializable)storageLinkId);
 	}
 
-	/**
-	 * Returns the ddm storage link with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm storage link
-	 * @return the ddm storage link, or <code>null</code> if a ddm storage link with the primary key could not be found
-	 */
 	@Override
-	public DDMStorageLink fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				DDMStorageLink.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DDMStorageLink ddmStorageLink = (DDMStorageLink)entityCache.getResult(
-			DDMStorageLinkImpl.class, primaryKey);
-
-		if (ddmStorageLink != null) {
-			return ddmStorageLink;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ddmStorageLink = (DDMStorageLink)session.get(
-				DDMStorageLinkImpl.class, primaryKey);
-
-			if (ddmStorageLink != null) {
-				cacheResult(ddmStorageLink);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return ddmStorageLink;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1723,132 +1571,6 @@ public class DDMStorageLinkPersistenceImpl
 	@Override
 	public DDMStorageLink fetchByPrimaryKey(long storageLinkId) {
 		return fetchByPrimaryKey((Serializable)storageLinkId);
-	}
-
-	@Override
-	public Map<Serializable, DDMStorageLink> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(DDMStorageLink.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DDMStorageLink> map =
-			new HashMap<Serializable, DDMStorageLink>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DDMStorageLink ddmStorageLink = fetchByPrimaryKey(primaryKey);
-
-			if (ddmStorageLink != null) {
-				map.put(primaryKey, ddmStorageLink);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						DDMStorageLink.class, primaryKey)) {
-
-				DDMStorageLink ddmStorageLink =
-					(DDMStorageLink)entityCache.getResult(
-						DDMStorageLinkImpl.class, primaryKey);
-
-				if (ddmStorageLink == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, ddmStorageLink);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DDMStorageLink ddmStorageLink :
-					(List<DDMStorageLink>)query.list()) {
-
-				map.put(ddmStorageLink.getPrimaryKeyObj(), ddmStorageLink);
-
-				cacheResult(ddmStorageLink);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2325,9 +2047,6 @@ public class DDMStorageLinkPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "ddmStorageLink.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DDMStorageLink exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DDMStorageLink exists with the key {";
 
@@ -2343,4 +2062,4 @@ public class DDMStorageLinkPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1169667028
+// LIFERAY-SERVICE-BUILDER-HASH:-919730979

@@ -67,7 +67,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -92,7 +91,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = MBThreadPersistence.class)
 public class MBThreadPersistenceImpl
-	extends BasePersistenceImpl<MBThread> implements MBThreadPersistence {
+	extends BasePersistenceImpl<MBThread, NoSuchThreadException>
+	implements MBThreadPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -7184,48 +7184,6 @@ public class MBThreadPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all message boards threads.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(MBThreadImpl.class);
-
-		finderCache.clearCache(MBThreadImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the message boards thread.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(MBThread mbThread) {
-		entityCache.removeResult(MBThreadImpl.class, mbThread);
-	}
-
-	@Override
-	public void clearCache(List<MBThread> mbThreads) {
-		for (MBThread mbThread : mbThreads) {
-			entityCache.removeResult(MBThreadImpl.class, mbThread);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(MBThreadImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(MBThreadImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		MBThreadModelImpl mbThreadModelImpl) {
 
@@ -7279,47 +7237,6 @@ public class MBThreadPersistenceImpl
 	@Override
 	public MBThread remove(long threadId) throws NoSuchThreadException {
 		return remove((Serializable)threadId);
-	}
-
-	/**
-	 * Removes the message boards thread with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the message boards thread
-	 * @return the message boards thread that was removed
-	 * @throws NoSuchThreadException if a message boards thread with the primary key could not be found
-	 */
-	@Override
-	public MBThread remove(Serializable primaryKey)
-		throws NoSuchThreadException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			MBThread mbThread = (MBThread)session.get(
-				MBThreadImpl.class, primaryKey);
-
-			if (mbThread == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchThreadException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(mbThread);
-		}
-		catch (NoSuchThreadException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -7467,31 +7384,6 @@ public class MBThreadPersistenceImpl
 	}
 
 	/**
-	 * Returns the message boards thread with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the message boards thread
-	 * @return the message boards thread
-	 * @throws NoSuchThreadException if a message boards thread with the primary key could not be found
-	 */
-	@Override
-	public MBThread findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchThreadException {
-
-		MBThread mbThread = fetchByPrimaryKey(primaryKey);
-
-		if (mbThread == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchThreadException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return mbThread;
-	}
-
-	/**
 	 * Returns the message boards thread with the primary key or throws a <code>NoSuchThreadException</code> if it could not be found.
 	 *
 	 * @param threadId the primary key of the message boards thread
@@ -7505,49 +7397,9 @@ public class MBThreadPersistenceImpl
 		return findByPrimaryKey((Serializable)threadId);
 	}
 
-	/**
-	 * Returns the message boards thread with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the message boards thread
-	 * @return the message boards thread, or <code>null</code> if a message boards thread with the primary key could not be found
-	 */
 	@Override
-	public MBThread fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(MBThread.class, primaryKey)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		MBThread mbThread = (MBThread)entityCache.getResult(
-			MBThreadImpl.class, primaryKey);
-
-		if (mbThread != null) {
-			return mbThread;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			mbThread = (MBThread)session.get(MBThreadImpl.class, primaryKey);
-
-			if (mbThread != null) {
-				cacheResult(mbThread);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return mbThread;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -7559,128 +7411,6 @@ public class MBThreadPersistenceImpl
 	@Override
 	public MBThread fetchByPrimaryKey(long threadId) {
 		return fetchByPrimaryKey((Serializable)threadId);
-	}
-
-	@Override
-	public Map<Serializable, MBThread> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(MBThread.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, MBThread> map = new HashMap<Serializable, MBThread>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			MBThread mbThread = fetchByPrimaryKey(primaryKey);
-
-			if (mbThread != null) {
-				map.put(primaryKey, mbThread);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						MBThread.class, primaryKey)) {
-
-				MBThread mbThread = (MBThread)entityCache.getResult(
-					MBThreadImpl.class, primaryKey);
-
-				if (mbThread == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, mbThread);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (MBThread mbThread : (List<MBThread>)query.list()) {
-				map.put(mbThread.getPrimaryKeyObj(), mbThread);
-
-				cacheResult(mbThread);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -8457,9 +8187,6 @@ public class MBThreadPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "MBThread.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No MBThread exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No MBThread exists with the key {";
 
@@ -8475,4 +8202,4 @@ public class MBThreadPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:131997732
+// LIFERAY-SERVICE-BUILDER-HASH:-569664440

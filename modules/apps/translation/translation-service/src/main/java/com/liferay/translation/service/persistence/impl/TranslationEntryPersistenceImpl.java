@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = TranslationEntryPersistence.class)
 public class TranslationEntryPersistenceImpl
-	extends BasePersistenceImpl<TranslationEntry>
+	extends BasePersistenceImpl<TranslationEntry, NoSuchEntryException>
 	implements TranslationEntryPersistence {
 
 	/*
@@ -870,49 +869,6 @@ public class TranslationEntryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all translation entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(TranslationEntryImpl.class);
-
-		finderCache.clearCache(TranslationEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the translation entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(TranslationEntry translationEntry) {
-		entityCache.removeResult(TranslationEntryImpl.class, translationEntry);
-	}
-
-	@Override
-	public void clearCache(List<TranslationEntry> translationEntries) {
-		for (TranslationEntry translationEntry : translationEntries) {
-			entityCache.removeResult(
-				TranslationEntryImpl.class, translationEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(TranslationEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(TranslationEntryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		TranslationEntryModelImpl translationEntryModelImpl) {
 
@@ -973,47 +929,6 @@ public class TranslationEntryPersistenceImpl
 		throws NoSuchEntryException {
 
 		return remove((Serializable)translationEntryId);
-	}
-
-	/**
-	 * Removes the translation entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the translation entry
-	 * @return the translation entry that was removed
-	 * @throws NoSuchEntryException if a translation entry with the primary key could not be found
-	 */
-	@Override
-	public TranslationEntry remove(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			TranslationEntry translationEntry = (TranslationEntry)session.get(
-				TranslationEntryImpl.class, primaryKey);
-
-			if (translationEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(translationEntry);
-		}
-		catch (NoSuchEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1145,31 +1060,6 @@ public class TranslationEntryPersistenceImpl
 	}
 
 	/**
-	 * Returns the translation entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the translation entry
-	 * @return the translation entry
-	 * @throws NoSuchEntryException if a translation entry with the primary key could not be found
-	 */
-	@Override
-	public TranslationEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		TranslationEntry translationEntry = fetchByPrimaryKey(primaryKey);
-
-		if (translationEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return translationEntry;
-	}
-
-	/**
 	 * Returns the translation entry with the primary key or throws a <code>NoSuchEntryException</code> if it could not be found.
 	 *
 	 * @param translationEntryId the primary key of the translation entry
@@ -1183,53 +1073,9 @@ public class TranslationEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)translationEntryId);
 	}
 
-	/**
-	 * Returns the translation entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the translation entry
-	 * @return the translation entry, or <code>null</code> if a translation entry with the primary key could not be found
-	 */
 	@Override
-	public TranslationEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				TranslationEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		TranslationEntry translationEntry =
-			(TranslationEntry)entityCache.getResult(
-				TranslationEntryImpl.class, primaryKey);
-
-		if (translationEntry != null) {
-			return translationEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			translationEntry = (TranslationEntry)session.get(
-				TranslationEntryImpl.class, primaryKey);
-
-			if (translationEntry != null) {
-				cacheResult(translationEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return translationEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1241,132 +1087,6 @@ public class TranslationEntryPersistenceImpl
 	@Override
 	public TranslationEntry fetchByPrimaryKey(long translationEntryId) {
 		return fetchByPrimaryKey((Serializable)translationEntryId);
-	}
-
-	@Override
-	public Map<Serializable, TranslationEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(TranslationEntry.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, TranslationEntry> map =
-			new HashMap<Serializable, TranslationEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			TranslationEntry translationEntry = fetchByPrimaryKey(primaryKey);
-
-			if (translationEntry != null) {
-				map.put(primaryKey, translationEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						TranslationEntry.class, primaryKey)) {
-
-				TranslationEntry translationEntry =
-					(TranslationEntry)entityCache.getResult(
-						TranslationEntryImpl.class, primaryKey);
-
-				if (translationEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, translationEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (TranslationEntry translationEntry :
-					(List<TranslationEntry>)query.list()) {
-
-				map.put(translationEntry.getPrimaryKeyObj(), translationEntry);
-
-				cacheResult(translationEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1865,9 +1585,6 @@ public class TranslationEntryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "translationEntry.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No TranslationEntry exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No TranslationEntry exists with the key {";
 
@@ -1883,4 +1600,4 @@ public class TranslationEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-2083587622
+// LIFERAY-SERVICE-BUILDER-HASH:1503543867

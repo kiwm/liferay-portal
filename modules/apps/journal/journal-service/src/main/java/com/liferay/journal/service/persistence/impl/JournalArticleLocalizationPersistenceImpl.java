@@ -46,9 +46,7 @@ import java.lang.reflect.InvocationHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,7 +70,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = JournalArticleLocalizationPersistence.class)
 public class JournalArticleLocalizationPersistenceImpl
-	extends BasePersistenceImpl<JournalArticleLocalization>
+	extends BasePersistenceImpl
+		<JournalArticleLocalization, NoSuchArticleLocalizationException>
 	implements JournalArticleLocalizationPersistence {
 
 	/*
@@ -445,58 +444,6 @@ public class JournalArticleLocalizationPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all journal article localizations.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(JournalArticleLocalizationImpl.class);
-
-		finderCache.clearCache(JournalArticleLocalizationImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the journal article localization.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(
-		JournalArticleLocalization journalArticleLocalization) {
-
-		entityCache.removeResult(
-			JournalArticleLocalizationImpl.class, journalArticleLocalization);
-	}
-
-	@Override
-	public void clearCache(
-		List<JournalArticleLocalization> journalArticleLocalizations) {
-
-		for (JournalArticleLocalization journalArticleLocalization :
-				journalArticleLocalizations) {
-
-			entityCache.removeResult(
-				JournalArticleLocalizationImpl.class,
-				journalArticleLocalization);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(JournalArticleLocalizationImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				JournalArticleLocalizationImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		JournalArticleLocalizationModelImpl
 			journalArticleLocalizationModelImpl) {
@@ -549,48 +496,6 @@ public class JournalArticleLocalizationPersistenceImpl
 		throws NoSuchArticleLocalizationException {
 
 		return remove((Serializable)articleLocalizationId);
-	}
-
-	/**
-	 * Removes the journal article localization with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the journal article localization
-	 * @return the journal article localization that was removed
-	 * @throws NoSuchArticleLocalizationException if a journal article localization with the primary key could not be found
-	 */
-	@Override
-	public JournalArticleLocalization remove(Serializable primaryKey)
-		throws NoSuchArticleLocalizationException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			JournalArticleLocalization journalArticleLocalization =
-				(JournalArticleLocalization)session.get(
-					JournalArticleLocalizationImpl.class, primaryKey);
-
-			if (journalArticleLocalization == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchArticleLocalizationException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(journalArticleLocalization);
-		}
-		catch (NoSuchArticleLocalizationException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -701,32 +606,6 @@ public class JournalArticleLocalizationPersistenceImpl
 	}
 
 	/**
-	 * Returns the journal article localization with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the journal article localization
-	 * @return the journal article localization
-	 * @throws NoSuchArticleLocalizationException if a journal article localization with the primary key could not be found
-	 */
-	@Override
-	public JournalArticleLocalization findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchArticleLocalizationException {
-
-		JournalArticleLocalization journalArticleLocalization =
-			fetchByPrimaryKey(primaryKey);
-
-		if (journalArticleLocalization == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchArticleLocalizationException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return journalArticleLocalization;
-	}
-
-	/**
 	 * Returns the journal article localization with the primary key or throws a <code>NoSuchArticleLocalizationException</code> if it could not be found.
 	 *
 	 * @param articleLocalizationId the primary key of the journal article localization
@@ -741,56 +620,9 @@ public class JournalArticleLocalizationPersistenceImpl
 		return findByPrimaryKey((Serializable)articleLocalizationId);
 	}
 
-	/**
-	 * Returns the journal article localization with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the journal article localization
-	 * @return the journal article localization, or <code>null</code> if a journal article localization with the primary key could not be found
-	 */
 	@Override
-	public JournalArticleLocalization fetchByPrimaryKey(
-		Serializable primaryKey) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				JournalArticleLocalization.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		JournalArticleLocalization journalArticleLocalization =
-			(JournalArticleLocalization)entityCache.getResult(
-				JournalArticleLocalizationImpl.class, primaryKey);
-
-		if (journalArticleLocalization != null) {
-			return journalArticleLocalization;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			journalArticleLocalization =
-				(JournalArticleLocalization)session.get(
-					JournalArticleLocalizationImpl.class, primaryKey);
-
-			if (journalArticleLocalization != null) {
-				cacheResult(journalArticleLocalization);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return journalArticleLocalization;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -804,137 +636,6 @@ public class JournalArticleLocalizationPersistenceImpl
 		long articleLocalizationId) {
 
 		return fetchByPrimaryKey((Serializable)articleLocalizationId);
-	}
-
-	@Override
-	public Map<Serializable, JournalArticleLocalization> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				JournalArticleLocalization.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, JournalArticleLocalization> map =
-			new HashMap<Serializable, JournalArticleLocalization>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			JournalArticleLocalization journalArticleLocalization =
-				fetchByPrimaryKey(primaryKey);
-
-			if (journalArticleLocalization != null) {
-				map.put(primaryKey, journalArticleLocalization);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						JournalArticleLocalization.class, primaryKey)) {
-
-				JournalArticleLocalization journalArticleLocalization =
-					(JournalArticleLocalization)entityCache.getResult(
-						JournalArticleLocalizationImpl.class, primaryKey);
-
-				if (journalArticleLocalization == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, journalArticleLocalization);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (JournalArticleLocalization journalArticleLocalization :
-					(List<JournalArticleLocalization>)query.list()) {
-
-				map.put(
-					journalArticleLocalization.getPrimaryKeyObj(),
-					journalArticleLocalization);
-
-				cacheResult(journalArticleLocalization);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1348,9 +1049,6 @@ public class JournalArticleLocalizationPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"journalArticleLocalization.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No JournalArticleLocalization exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No JournalArticleLocalization exists with the key {";
 
@@ -1363,4 +1061,4 @@ public class JournalArticleLocalizationPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:580504752
+// LIFERAY-SERVICE-BUILDER-HASH:-1526770591

@@ -45,9 +45,7 @@ import java.lang.reflect.InvocationHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -71,7 +69,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = LayoutSEOEntryCustomMetaTagPersistence.class)
 public class LayoutSEOEntryCustomMetaTagPersistenceImpl
-	extends BasePersistenceImpl<LayoutSEOEntryCustomMetaTag>
+	extends BasePersistenceImpl
+		<LayoutSEOEntryCustomMetaTag, NoSuchEntryCustomMetaTagException>
 	implements LayoutSEOEntryCustomMetaTagPersistence {
 
 	/*
@@ -329,58 +328,6 @@ public class LayoutSEOEntryCustomMetaTagPersistenceImpl
 	}
 
 	/**
-	 * Clears the cache for all layout seo entry custom meta tags.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(LayoutSEOEntryCustomMetaTagImpl.class);
-
-		finderCache.clearCache(LayoutSEOEntryCustomMetaTagImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the layout seo entry custom meta tag.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(
-		LayoutSEOEntryCustomMetaTag layoutSEOEntryCustomMetaTag) {
-
-		entityCache.removeResult(
-			LayoutSEOEntryCustomMetaTagImpl.class, layoutSEOEntryCustomMetaTag);
-	}
-
-	@Override
-	public void clearCache(
-		List<LayoutSEOEntryCustomMetaTag> layoutSEOEntryCustomMetaTags) {
-
-		for (LayoutSEOEntryCustomMetaTag layoutSEOEntryCustomMetaTag :
-				layoutSEOEntryCustomMetaTags) {
-
-			entityCache.removeResult(
-				LayoutSEOEntryCustomMetaTagImpl.class,
-				layoutSEOEntryCustomMetaTag);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(LayoutSEOEntryCustomMetaTagImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				LayoutSEOEntryCustomMetaTagImpl.class, primaryKey);
-		}
-	}
-
-	/**
 	 * Creates a new layout seo entry custom meta tag with the primary key. Does not add the layout seo entry custom meta tag to the database.
 	 *
 	 * @param layoutSEOEntryCustomMetaTagId the primary key for the new layout seo entry custom meta tag
@@ -416,48 +363,6 @@ public class LayoutSEOEntryCustomMetaTagPersistenceImpl
 		throws NoSuchEntryCustomMetaTagException {
 
 		return remove((Serializable)layoutSEOEntryCustomMetaTagId);
-	}
-
-	/**
-	 * Removes the layout seo entry custom meta tag with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the layout seo entry custom meta tag
-	 * @return the layout seo entry custom meta tag that was removed
-	 * @throws NoSuchEntryCustomMetaTagException if a layout seo entry custom meta tag with the primary key could not be found
-	 */
-	@Override
-	public LayoutSEOEntryCustomMetaTag remove(Serializable primaryKey)
-		throws NoSuchEntryCustomMetaTagException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			LayoutSEOEntryCustomMetaTag layoutSEOEntryCustomMetaTag =
-				(LayoutSEOEntryCustomMetaTag)session.get(
-					LayoutSEOEntryCustomMetaTagImpl.class, primaryKey);
-
-			if (layoutSEOEntryCustomMetaTag == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEntryCustomMetaTagException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(layoutSEOEntryCustomMetaTag);
-		}
-		catch (NoSuchEntryCustomMetaTagException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -569,32 +474,6 @@ public class LayoutSEOEntryCustomMetaTagPersistenceImpl
 	}
 
 	/**
-	 * Returns the layout seo entry custom meta tag with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the layout seo entry custom meta tag
-	 * @return the layout seo entry custom meta tag
-	 * @throws NoSuchEntryCustomMetaTagException if a layout seo entry custom meta tag with the primary key could not be found
-	 */
-	@Override
-	public LayoutSEOEntryCustomMetaTag findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEntryCustomMetaTagException {
-
-		LayoutSEOEntryCustomMetaTag layoutSEOEntryCustomMetaTag =
-			fetchByPrimaryKey(primaryKey);
-
-		if (layoutSEOEntryCustomMetaTag == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEntryCustomMetaTagException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return layoutSEOEntryCustomMetaTag;
-	}
-
-	/**
 	 * Returns the layout seo entry custom meta tag with the primary key or throws a <code>NoSuchEntryCustomMetaTagException</code> if it could not be found.
 	 *
 	 * @param layoutSEOEntryCustomMetaTagId the primary key of the layout seo entry custom meta tag
@@ -609,56 +488,9 @@ public class LayoutSEOEntryCustomMetaTagPersistenceImpl
 		return findByPrimaryKey((Serializable)layoutSEOEntryCustomMetaTagId);
 	}
 
-	/**
-	 * Returns the layout seo entry custom meta tag with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the layout seo entry custom meta tag
-	 * @return the layout seo entry custom meta tag, or <code>null</code> if a layout seo entry custom meta tag with the primary key could not be found
-	 */
 	@Override
-	public LayoutSEOEntryCustomMetaTag fetchByPrimaryKey(
-		Serializable primaryKey) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				LayoutSEOEntryCustomMetaTag.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		LayoutSEOEntryCustomMetaTag layoutSEOEntryCustomMetaTag =
-			(LayoutSEOEntryCustomMetaTag)entityCache.getResult(
-				LayoutSEOEntryCustomMetaTagImpl.class, primaryKey);
-
-		if (layoutSEOEntryCustomMetaTag != null) {
-			return layoutSEOEntryCustomMetaTag;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			layoutSEOEntryCustomMetaTag =
-				(LayoutSEOEntryCustomMetaTag)session.get(
-					LayoutSEOEntryCustomMetaTagImpl.class, primaryKey);
-
-			if (layoutSEOEntryCustomMetaTag != null) {
-				cacheResult(layoutSEOEntryCustomMetaTag);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return layoutSEOEntryCustomMetaTag;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -672,137 +504,6 @@ public class LayoutSEOEntryCustomMetaTagPersistenceImpl
 		long layoutSEOEntryCustomMetaTagId) {
 
 		return fetchByPrimaryKey((Serializable)layoutSEOEntryCustomMetaTagId);
-	}
-
-	@Override
-	public Map<Serializable, LayoutSEOEntryCustomMetaTag> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				LayoutSEOEntryCustomMetaTag.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, LayoutSEOEntryCustomMetaTag> map =
-			new HashMap<Serializable, LayoutSEOEntryCustomMetaTag>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			LayoutSEOEntryCustomMetaTag layoutSEOEntryCustomMetaTag =
-				fetchByPrimaryKey(primaryKey);
-
-			if (layoutSEOEntryCustomMetaTag != null) {
-				map.put(primaryKey, layoutSEOEntryCustomMetaTag);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						LayoutSEOEntryCustomMetaTag.class, primaryKey)) {
-
-				LayoutSEOEntryCustomMetaTag layoutSEOEntryCustomMetaTag =
-					(LayoutSEOEntryCustomMetaTag)entityCache.getResult(
-						LayoutSEOEntryCustomMetaTagImpl.class, primaryKey);
-
-				if (layoutSEOEntryCustomMetaTag == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, layoutSEOEntryCustomMetaTag);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (LayoutSEOEntryCustomMetaTag layoutSEOEntryCustomMetaTag :
-					(List<LayoutSEOEntryCustomMetaTag>)query.list()) {
-
-				map.put(
-					layoutSEOEntryCustomMetaTag.getPrimaryKeyObj(),
-					layoutSEOEntryCustomMetaTag);
-
-				cacheResult(layoutSEOEntryCustomMetaTag);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1190,9 +891,6 @@ public class LayoutSEOEntryCustomMetaTagPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"layoutSEOEntryCustomMetaTag.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No LayoutSEOEntryCustomMetaTag exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No LayoutSEOEntryCustomMetaTag exists with the key {";
 
@@ -1205,4 +903,4 @@ public class LayoutSEOEntryCustomMetaTagPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1202445561
+// LIFERAY-SERVICE-BUILDER-HASH:834345193

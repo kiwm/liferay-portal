@@ -20,6 +20,7 @@ import com.liferay.portal.kernel.dao.orm.Session;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -47,7 +48,6 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,7 +63,7 @@ import java.util.Set;
  * @generated
  */
 public class SocialActivitySetPersistenceImpl
-	extends BasePersistenceImpl<SocialActivitySet>
+	extends BasePersistenceImpl<SocialActivitySet, NoSuchActivitySetException>
 	implements SocialActivitySetPersistence {
 
 	/*
@@ -1225,51 +1225,6 @@ public class SocialActivitySetPersistenceImpl
 	}
 
 	/**
-	 * Clears the cache for all social activity sets.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(SocialActivitySetImpl.class);
-
-		FinderCacheUtil.clearCache(SocialActivitySetImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the social activity set.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(SocialActivitySet socialActivitySet) {
-		EntityCacheUtil.removeResult(
-			SocialActivitySetImpl.class, socialActivitySet);
-	}
-
-	@Override
-	public void clearCache(List<SocialActivitySet> socialActivitySets) {
-		for (SocialActivitySet socialActivitySet : socialActivitySets) {
-			EntityCacheUtil.removeResult(
-				SocialActivitySetImpl.class, socialActivitySet);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(SocialActivitySetImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(
-				SocialActivitySetImpl.class, primaryKey);
-		}
-	}
-
-	/**
 	 * Creates a new social activity set with the primary key. Does not add the social activity set to the database.
 	 *
 	 * @param activitySetId the primary key for the new social activity set
@@ -1299,48 +1254,6 @@ public class SocialActivitySetPersistenceImpl
 		throws NoSuchActivitySetException {
 
 		return remove((Serializable)activitySetId);
-	}
-
-	/**
-	 * Removes the social activity set with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the social activity set
-	 * @return the social activity set that was removed
-	 * @throws NoSuchActivitySetException if a social activity set with the primary key could not be found
-	 */
-	@Override
-	public SocialActivitySet remove(Serializable primaryKey)
-		throws NoSuchActivitySetException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			SocialActivitySet socialActivitySet =
-				(SocialActivitySet)session.get(
-					SocialActivitySetImpl.class, primaryKey);
-
-			if (socialActivitySet == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchActivitySetException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(socialActivitySet);
-		}
-		catch (NoSuchActivitySetException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1442,31 +1355,6 @@ public class SocialActivitySetPersistenceImpl
 	}
 
 	/**
-	 * Returns the social activity set with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the social activity set
-	 * @return the social activity set
-	 * @throws NoSuchActivitySetException if a social activity set with the primary key could not be found
-	 */
-	@Override
-	public SocialActivitySet findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchActivitySetException {
-
-		SocialActivitySet socialActivitySet = fetchByPrimaryKey(primaryKey);
-
-		if (socialActivitySet == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchActivitySetException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return socialActivitySet;
-	}
-
-	/**
 	 * Returns the social activity set with the primary key or throws a <code>NoSuchActivitySetException</code> if it could not be found.
 	 *
 	 * @param activitySetId the primary key of the social activity set
@@ -1480,53 +1368,9 @@ public class SocialActivitySetPersistenceImpl
 		return findByPrimaryKey((Serializable)activitySetId);
 	}
 
-	/**
-	 * Returns the social activity set with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the social activity set
-	 * @return the social activity set, or <code>null</code> if a social activity set with the primary key could not be found
-	 */
 	@Override
-	public SocialActivitySet fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				SocialActivitySet.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		SocialActivitySet socialActivitySet =
-			(SocialActivitySet)EntityCacheUtil.getResult(
-				SocialActivitySetImpl.class, primaryKey);
-
-		if (socialActivitySet != null) {
-			return socialActivitySet;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			socialActivitySet = (SocialActivitySet)session.get(
-				SocialActivitySetImpl.class, primaryKey);
-
-			if (socialActivitySet != null) {
-				cacheResult(socialActivitySet);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return socialActivitySet;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -1538,133 +1382,6 @@ public class SocialActivitySetPersistenceImpl
 	@Override
 	public SocialActivitySet fetchByPrimaryKey(long activitySetId) {
 		return fetchByPrimaryKey((Serializable)activitySetId);
-	}
-
-	@Override
-	public Map<Serializable, SocialActivitySet> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(SocialActivitySet.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, SocialActivitySet> map =
-			new HashMap<Serializable, SocialActivitySet>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			SocialActivitySet socialActivitySet = fetchByPrimaryKey(primaryKey);
-
-			if (socialActivitySet != null) {
-				map.put(primaryKey, socialActivitySet);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						SocialActivitySet.class, primaryKey)) {
-
-				SocialActivitySet socialActivitySet =
-					(SocialActivitySet)EntityCacheUtil.getResult(
-						SocialActivitySetImpl.class, primaryKey);
-
-				if (socialActivitySet == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, socialActivitySet);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (SocialActivitySet socialActivitySet :
-					(List<SocialActivitySet>)query.list()) {
-
-				map.put(
-					socialActivitySet.getPrimaryKeyObj(), socialActivitySet);
-
-				cacheResult(socialActivitySet);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2219,9 +1936,6 @@ public class SocialActivitySetPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "socialActivitySet.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No SocialActivitySet exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No SocialActivitySet exists with the key {";
 
@@ -2237,4 +1951,4 @@ public class SocialActivitySetPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1465362596
+// LIFERAY-SERVICE-BUILDER-HASH:-985134676

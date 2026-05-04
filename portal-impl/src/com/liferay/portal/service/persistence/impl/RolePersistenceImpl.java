@@ -39,6 +39,7 @@ import com.liferay.portal.kernel.service.persistence.GroupPersistence;
 import com.liferay.portal.kernel.service.persistence.RolePersistence;
 import com.liferay.portal.kernel.service.persistence.RoleUtil;
 import com.liferay.portal.kernel.service.persistence.UserPersistence;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -72,7 +73,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -89,7 +89,8 @@ import java.util.Set;
  * @generated
  */
 public class RolePersistenceImpl
-	extends BasePersistenceImpl<Role> implements RolePersistence {
+	extends BasePersistenceImpl<Role, NoSuchRoleException>
+	implements RolePersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -5680,48 +5681,6 @@ public class RolePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all roles.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(RoleImpl.class);
-
-		FinderCacheUtil.clearCache(RoleImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the role.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(Role role) {
-		EntityCacheUtil.removeResult(RoleImpl.class, role);
-	}
-
-	@Override
-	public void clearCache(List<Role> roles) {
-		for (Role role : roles) {
-			EntityCacheUtil.removeResult(RoleImpl.class, role);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(RoleImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(RoleImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(RoleModelImpl roleModelImpl) {
 		try (SafeCloseable safeCloseable =
 				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
@@ -5792,44 +5751,6 @@ public class RolePersistenceImpl
 	@Override
 	public Role remove(long roleId) throws NoSuchRoleException {
 		return remove((Serializable)roleId);
-	}
-
-	/**
-	 * Removes the role with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the role
-	 * @return the role that was removed
-	 * @throws NoSuchRoleException if a role with the primary key could not be found
-	 */
-	@Override
-	public Role remove(Serializable primaryKey) throws NoSuchRoleException {
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Role role = (Role)session.get(RoleImpl.class, primaryKey);
-
-			if (role == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchRoleException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(role);
-		}
-		catch (NoSuchRoleException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -6016,31 +5937,6 @@ public class RolePersistenceImpl
 	}
 
 	/**
-	 * Returns the role with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the role
-	 * @return the role
-	 * @throws NoSuchRoleException if a role with the primary key could not be found
-	 */
-	@Override
-	public Role findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchRoleException {
-
-		Role role = fetchByPrimaryKey(primaryKey);
-
-		if (role == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchRoleException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return role;
-	}
-
-	/**
 	 * Returns the role with the primary key or throws a <code>NoSuchRoleException</code> if it could not be found.
 	 *
 	 * @param roleId the primary key of the role
@@ -6052,48 +5948,9 @@ public class RolePersistenceImpl
 		return findByPrimaryKey((Serializable)roleId);
 	}
 
-	/**
-	 * Returns the role with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the role
-	 * @return the role, or <code>null</code> if a role with the primary key could not be found
-	 */
 	@Override
-	public Role fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(Role.class, primaryKey)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		Role role = (Role)EntityCacheUtil.getResult(RoleImpl.class, primaryKey);
-
-		if (role != null) {
-			return role;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			role = (Role)session.get(RoleImpl.class, primaryKey);
-
-			if (role != null) {
-				cacheResult(role);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return role;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -6105,128 +5962,6 @@ public class RolePersistenceImpl
 	@Override
 	public Role fetchByPrimaryKey(long roleId) {
 		return fetchByPrimaryKey((Serializable)roleId);
-	}
-
-	@Override
-	public Map<Serializable, Role> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(Role.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, Role> map = new HashMap<Serializable, Role>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			Role role = fetchByPrimaryKey(primaryKey);
-
-			if (role != null) {
-				map.put(primaryKey, role);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						Role.class, primaryKey)) {
-
-				Role role = (Role)EntityCacheUtil.getResult(
-					RoleImpl.class, primaryKey);
-
-				if (role == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, role);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (Role role : (List<Role>)query.list()) {
-				map.put(role.getPrimaryKeyObj(), role);
-
-				cacheResult(role);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -7584,9 +7319,6 @@ public class RolePersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "Role_.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No Role exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No Role exists with the key {";
 
@@ -7602,4 +7334,4 @@ public class RolePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-2041712130
+// LIFERAY-SERVICE-BUILDER-HASH:727737080

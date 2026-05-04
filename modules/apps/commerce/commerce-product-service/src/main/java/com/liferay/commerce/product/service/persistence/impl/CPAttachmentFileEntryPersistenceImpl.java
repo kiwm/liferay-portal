@@ -61,7 +61,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -86,7 +85,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CPAttachmentFileEntryPersistence.class)
 public class CPAttachmentFileEntryPersistenceImpl
-	extends BasePersistenceImpl<CPAttachmentFileEntry>
+	extends BasePersistenceImpl
+		<CPAttachmentFileEntry, NoSuchCPAttachmentFileEntryException>
 	implements CPAttachmentFileEntryPersistence {
 
 	/*
@@ -2791,55 +2791,6 @@ public class CPAttachmentFileEntryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all cp attachment file entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CPAttachmentFileEntryImpl.class);
-
-		finderCache.clearCache(CPAttachmentFileEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the cp attachment file entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(CPAttachmentFileEntry cpAttachmentFileEntry) {
-		entityCache.removeResult(
-			CPAttachmentFileEntryImpl.class, cpAttachmentFileEntry);
-	}
-
-	@Override
-	public void clearCache(
-		List<CPAttachmentFileEntry> cpAttachmentFileEntries) {
-
-		for (CPAttachmentFileEntry cpAttachmentFileEntry :
-				cpAttachmentFileEntries) {
-
-			entityCache.removeResult(
-				CPAttachmentFileEntryImpl.class, cpAttachmentFileEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CPAttachmentFileEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				CPAttachmentFileEntryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		CPAttachmentFileEntryModelImpl cpAttachmentFileEntryModelImpl) {
 
@@ -2900,48 +2851,6 @@ public class CPAttachmentFileEntryPersistenceImpl
 		throws NoSuchCPAttachmentFileEntryException {
 
 		return remove((Serializable)CPAttachmentFileEntryId);
-	}
-
-	/**
-	 * Removes the cp attachment file entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the cp attachment file entry
-	 * @return the cp attachment file entry that was removed
-	 * @throws NoSuchCPAttachmentFileEntryException if a cp attachment file entry with the primary key could not be found
-	 */
-	@Override
-	public CPAttachmentFileEntry remove(Serializable primaryKey)
-		throws NoSuchCPAttachmentFileEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CPAttachmentFileEntry cpAttachmentFileEntry =
-				(CPAttachmentFileEntry)session.get(
-					CPAttachmentFileEntryImpl.class, primaryKey);
-
-			if (cpAttachmentFileEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCPAttachmentFileEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(cpAttachmentFileEntry);
-		}
-		catch (NoSuchCPAttachmentFileEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -3150,32 +3059,6 @@ public class CPAttachmentFileEntryPersistenceImpl
 	}
 
 	/**
-	 * Returns the cp attachment file entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cp attachment file entry
-	 * @return the cp attachment file entry
-	 * @throws NoSuchCPAttachmentFileEntryException if a cp attachment file entry with the primary key could not be found
-	 */
-	@Override
-	public CPAttachmentFileEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCPAttachmentFileEntryException {
-
-		CPAttachmentFileEntry cpAttachmentFileEntry = fetchByPrimaryKey(
-			primaryKey);
-
-		if (cpAttachmentFileEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCPAttachmentFileEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return cpAttachmentFileEntry;
-	}
-
-	/**
 	 * Returns the cp attachment file entry with the primary key or throws a <code>NoSuchCPAttachmentFileEntryException</code> if it could not be found.
 	 *
 	 * @param CPAttachmentFileEntryId the primary key of the cp attachment file entry
@@ -3189,53 +3072,9 @@ public class CPAttachmentFileEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)CPAttachmentFileEntryId);
 	}
 
-	/**
-	 * Returns the cp attachment file entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cp attachment file entry
-	 * @return the cp attachment file entry, or <code>null</code> if a cp attachment file entry with the primary key could not be found
-	 */
 	@Override
-	public CPAttachmentFileEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				CPAttachmentFileEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		CPAttachmentFileEntry cpAttachmentFileEntry =
-			(CPAttachmentFileEntry)entityCache.getResult(
-				CPAttachmentFileEntryImpl.class, primaryKey);
-
-		if (cpAttachmentFileEntry != null) {
-			return cpAttachmentFileEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			cpAttachmentFileEntry = (CPAttachmentFileEntry)session.get(
-				CPAttachmentFileEntryImpl.class, primaryKey);
-
-			if (cpAttachmentFileEntry != null) {
-				cacheResult(cpAttachmentFileEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return cpAttachmentFileEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -3249,135 +3088,6 @@ public class CPAttachmentFileEntryPersistenceImpl
 		long CPAttachmentFileEntryId) {
 
 		return fetchByPrimaryKey((Serializable)CPAttachmentFileEntryId);
-	}
-
-	@Override
-	public Map<Serializable, CPAttachmentFileEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(CPAttachmentFileEntry.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, CPAttachmentFileEntry> map =
-			new HashMap<Serializable, CPAttachmentFileEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			CPAttachmentFileEntry cpAttachmentFileEntry = fetchByPrimaryKey(
-				primaryKey);
-
-			if (cpAttachmentFileEntry != null) {
-				map.put(primaryKey, cpAttachmentFileEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						CPAttachmentFileEntry.class, primaryKey)) {
-
-				CPAttachmentFileEntry cpAttachmentFileEntry =
-					(CPAttachmentFileEntry)entityCache.getResult(
-						CPAttachmentFileEntryImpl.class, primaryKey);
-
-				if (cpAttachmentFileEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, cpAttachmentFileEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (CPAttachmentFileEntry cpAttachmentFileEntry :
-					(List<CPAttachmentFileEntry>)query.list()) {
-
-				map.put(
-					cpAttachmentFileEntry.getPrimaryKeyObj(),
-					cpAttachmentFileEntry);
-
-				cacheResult(cpAttachmentFileEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -4323,9 +4033,6 @@ public class CPAttachmentFileEntryPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"cpAttachmentFileEntry.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CPAttachmentFileEntry exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CPAttachmentFileEntry exists with the key {";
 
@@ -4341,4 +4048,4 @@ public class CPAttachmentFileEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1271001340
+// LIFERAY-SERVICE-BUILDER-HASH:-719906886

@@ -51,7 +51,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,7 +74,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = KaleoActionPersistence.class)
 public class KaleoActionPersistenceImpl
-	extends BasePersistenceImpl<KaleoAction> implements KaleoActionPersistence {
+	extends BasePersistenceImpl<KaleoAction, NoSuchActionException>
+	implements KaleoActionPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -1255,48 +1255,6 @@ public class KaleoActionPersistenceImpl
 	}
 
 	/**
-	 * Clears the cache for all kaleo actions.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(KaleoActionImpl.class);
-
-		finderCache.clearCache(KaleoActionImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the kaleo action.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(KaleoAction kaleoAction) {
-		entityCache.removeResult(KaleoActionImpl.class, kaleoAction);
-	}
-
-	@Override
-	public void clearCache(List<KaleoAction> kaleoActions) {
-		for (KaleoAction kaleoAction : kaleoActions) {
-			entityCache.removeResult(KaleoActionImpl.class, kaleoAction);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(KaleoActionImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(KaleoActionImpl.class, primaryKey);
-		}
-	}
-
-	/**
 	 * Creates a new kaleo action with the primary key. Does not add the kaleo action to the database.
 	 *
 	 * @param kaleoActionId the primary key for the new kaleo action
@@ -1324,47 +1282,6 @@ public class KaleoActionPersistenceImpl
 	@Override
 	public KaleoAction remove(long kaleoActionId) throws NoSuchActionException {
 		return remove((Serializable)kaleoActionId);
-	}
-
-	/**
-	 * Removes the kaleo action with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the kaleo action
-	 * @return the kaleo action that was removed
-	 * @throws NoSuchActionException if a kaleo action with the primary key could not be found
-	 */
-	@Override
-	public KaleoAction remove(Serializable primaryKey)
-		throws NoSuchActionException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			KaleoAction kaleoAction = (KaleoAction)session.get(
-				KaleoActionImpl.class, primaryKey);
-
-			if (kaleoAction == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchActionException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(kaleoAction);
-		}
-		catch (NoSuchActionException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1483,31 +1400,6 @@ public class KaleoActionPersistenceImpl
 	}
 
 	/**
-	 * Returns the kaleo action with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kaleo action
-	 * @return the kaleo action
-	 * @throws NoSuchActionException if a kaleo action with the primary key could not be found
-	 */
-	@Override
-	public KaleoAction findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchActionException {
-
-		KaleoAction kaleoAction = fetchByPrimaryKey(primaryKey);
-
-		if (kaleoAction == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchActionException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return kaleoAction;
-	}
-
-	/**
 	 * Returns the kaleo action with the primary key or throws a <code>NoSuchActionException</code> if it could not be found.
 	 *
 	 * @param kaleoActionId the primary key of the kaleo action
@@ -1521,52 +1413,9 @@ public class KaleoActionPersistenceImpl
 		return findByPrimaryKey((Serializable)kaleoActionId);
 	}
 
-	/**
-	 * Returns the kaleo action with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kaleo action
-	 * @return the kaleo action, or <code>null</code> if a kaleo action with the primary key could not be found
-	 */
 	@Override
-	public KaleoAction fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				KaleoAction.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		KaleoAction kaleoAction = (KaleoAction)entityCache.getResult(
-			KaleoActionImpl.class, primaryKey);
-
-		if (kaleoAction != null) {
-			return kaleoAction;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			kaleoAction = (KaleoAction)session.get(
-				KaleoActionImpl.class, primaryKey);
-
-			if (kaleoAction != null) {
-				cacheResult(kaleoAction);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return kaleoAction;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1578,129 +1427,6 @@ public class KaleoActionPersistenceImpl
 	@Override
 	public KaleoAction fetchByPrimaryKey(long kaleoActionId) {
 		return fetchByPrimaryKey((Serializable)kaleoActionId);
-	}
-
-	@Override
-	public Map<Serializable, KaleoAction> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(KaleoAction.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, KaleoAction> map =
-			new HashMap<Serializable, KaleoAction>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			KaleoAction kaleoAction = fetchByPrimaryKey(primaryKey);
-
-			if (kaleoAction != null) {
-				map.put(primaryKey, kaleoAction);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						KaleoAction.class, primaryKey)) {
-
-				KaleoAction kaleoAction = (KaleoAction)entityCache.getResult(
-					KaleoActionImpl.class, primaryKey);
-
-				if (kaleoAction == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, kaleoAction);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (KaleoAction kaleoAction : (List<KaleoAction>)query.list()) {
-				map.put(kaleoAction.getPrimaryKeyObj(), kaleoAction);
-
-				cacheResult(kaleoAction);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2307,9 +2033,6 @@ public class KaleoActionPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "kaleoAction.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No KaleoAction exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No KaleoAction exists with the key {";
 
@@ -2325,4 +2048,4 @@ public class KaleoActionPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:779658303
+// LIFERAY-SERVICE-BUILDER-HASH:125470362

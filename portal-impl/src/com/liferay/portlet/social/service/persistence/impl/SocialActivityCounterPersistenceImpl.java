@@ -21,6 +21,7 @@ import com.liferay.portal.kernel.dao.orm.Session;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -49,7 +50,6 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -65,7 +65,8 @@ import java.util.Set;
  * @generated
  */
 public class SocialActivityCounterPersistenceImpl
-	extends BasePersistenceImpl<SocialActivityCounter>
+	extends BasePersistenceImpl
+		<SocialActivityCounter, NoSuchActivityCounterException>
 	implements SocialActivityCounterPersistence {
 
 	/*
@@ -1178,53 +1179,6 @@ public class SocialActivityCounterPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all social activity counters.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(SocialActivityCounterImpl.class);
-
-		FinderCacheUtil.clearCache(SocialActivityCounterImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the social activity counter.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(SocialActivityCounter socialActivityCounter) {
-		EntityCacheUtil.removeResult(
-			SocialActivityCounterImpl.class, socialActivityCounter);
-	}
-
-	@Override
-	public void clearCache(List<SocialActivityCounter> socialActivityCounters) {
-		for (SocialActivityCounter socialActivityCounter :
-				socialActivityCounters) {
-
-			EntityCacheUtil.removeResult(
-				SocialActivityCounterImpl.class, socialActivityCounter);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(SocialActivityCounterImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(
-				SocialActivityCounterImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		SocialActivityCounterModelImpl socialActivityCounterModelImpl) {
 
@@ -1291,48 +1245,6 @@ public class SocialActivityCounterPersistenceImpl
 		throws NoSuchActivityCounterException {
 
 		return remove((Serializable)activityCounterId);
-	}
-
-	/**
-	 * Removes the social activity counter with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the social activity counter
-	 * @return the social activity counter that was removed
-	 * @throws NoSuchActivityCounterException if a social activity counter with the primary key could not be found
-	 */
-	@Override
-	public SocialActivityCounter remove(Serializable primaryKey)
-		throws NoSuchActivityCounterException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			SocialActivityCounter socialActivityCounter =
-				(SocialActivityCounter)session.get(
-					SocialActivityCounterImpl.class, primaryKey);
-
-			if (socialActivityCounter == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchActivityCounterException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(socialActivityCounter);
-		}
-		catch (NoSuchActivityCounterException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1440,32 +1352,6 @@ public class SocialActivityCounterPersistenceImpl
 	}
 
 	/**
-	 * Returns the social activity counter with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the social activity counter
-	 * @return the social activity counter
-	 * @throws NoSuchActivityCounterException if a social activity counter with the primary key could not be found
-	 */
-	@Override
-	public SocialActivityCounter findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchActivityCounterException {
-
-		SocialActivityCounter socialActivityCounter = fetchByPrimaryKey(
-			primaryKey);
-
-		if (socialActivityCounter == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchActivityCounterException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return socialActivityCounter;
-	}
-
-	/**
 	 * Returns the social activity counter with the primary key or throws a <code>NoSuchActivityCounterException</code> if it could not be found.
 	 *
 	 * @param activityCounterId the primary key of the social activity counter
@@ -1479,53 +1365,9 @@ public class SocialActivityCounterPersistenceImpl
 		return findByPrimaryKey((Serializable)activityCounterId);
 	}
 
-	/**
-	 * Returns the social activity counter with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the social activity counter
-	 * @return the social activity counter, or <code>null</code> if a social activity counter with the primary key could not be found
-	 */
 	@Override
-	public SocialActivityCounter fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				SocialActivityCounter.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		SocialActivityCounter socialActivityCounter =
-			(SocialActivityCounter)EntityCacheUtil.getResult(
-				SocialActivityCounterImpl.class, primaryKey);
-
-		if (socialActivityCounter != null) {
-			return socialActivityCounter;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			socialActivityCounter = (SocialActivityCounter)session.get(
-				SocialActivityCounterImpl.class, primaryKey);
-
-			if (socialActivityCounter != null) {
-				cacheResult(socialActivityCounter);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return socialActivityCounter;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -1537,137 +1379,6 @@ public class SocialActivityCounterPersistenceImpl
 	@Override
 	public SocialActivityCounter fetchByPrimaryKey(long activityCounterId) {
 		return fetchByPrimaryKey((Serializable)activityCounterId);
-	}
-
-	@Override
-	public Map<Serializable, SocialActivityCounter> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(
-				SocialActivityCounter.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, SocialActivityCounter> map =
-			new HashMap<Serializable, SocialActivityCounter>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			SocialActivityCounter socialActivityCounter = fetchByPrimaryKey(
-				primaryKey);
-
-			if (socialActivityCounter != null) {
-				map.put(primaryKey, socialActivityCounter);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						SocialActivityCounter.class, primaryKey)) {
-
-				SocialActivityCounter socialActivityCounter =
-					(SocialActivityCounter)EntityCacheUtil.getResult(
-						SocialActivityCounterImpl.class, primaryKey);
-
-				if (socialActivityCounter == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, socialActivityCounter);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (SocialActivityCounter socialActivityCounter :
-					(List<SocialActivityCounter>)query.list()) {
-
-				map.put(
-					socialActivityCounter.getPrimaryKeyObj(),
-					socialActivityCounter);
-
-				cacheResult(socialActivityCounter);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2171,9 +1882,6 @@ public class SocialActivityCounterPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"socialActivityCounter.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No SocialActivityCounter exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No SocialActivityCounter exists with the key {";
 
@@ -2189,4 +1897,4 @@ public class SocialActivityCounterPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1981868024
+// LIFERAY-SERVICE-BUILDER-HASH:544167300

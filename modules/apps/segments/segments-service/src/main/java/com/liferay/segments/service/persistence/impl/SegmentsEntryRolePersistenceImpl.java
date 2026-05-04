@@ -49,9 +49,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,7 +73,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = SegmentsEntryRolePersistence.class)
 public class SegmentsEntryRolePersistenceImpl
-	extends BasePersistenceImpl<SegmentsEntryRole>
+	extends BasePersistenceImpl<SegmentsEntryRole, NoSuchEntryRoleException>
 	implements SegmentsEntryRolePersistence {
 
 	/*
@@ -574,50 +572,6 @@ public class SegmentsEntryRolePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all segments entry roles.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(SegmentsEntryRoleImpl.class);
-
-		finderCache.clearCache(SegmentsEntryRoleImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the segments entry role.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(SegmentsEntryRole segmentsEntryRole) {
-		entityCache.removeResult(
-			SegmentsEntryRoleImpl.class, segmentsEntryRole);
-	}
-
-	@Override
-	public void clearCache(List<SegmentsEntryRole> segmentsEntryRoles) {
-		for (SegmentsEntryRole segmentsEntryRole : segmentsEntryRoles) {
-			entityCache.removeResult(
-				SegmentsEntryRoleImpl.class, segmentsEntryRole);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(SegmentsEntryRoleImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(SegmentsEntryRoleImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		SegmentsEntryRoleModelImpl segmentsEntryRoleModelImpl) {
 
@@ -665,48 +619,6 @@ public class SegmentsEntryRolePersistenceImpl
 		throws NoSuchEntryRoleException {
 
 		return remove((Serializable)segmentsEntryRoleId);
-	}
-
-	/**
-	 * Removes the segments entry role with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the segments entry role
-	 * @return the segments entry role that was removed
-	 * @throws NoSuchEntryRoleException if a segments entry role with the primary key could not be found
-	 */
-	@Override
-	public SegmentsEntryRole remove(Serializable primaryKey)
-		throws NoSuchEntryRoleException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			SegmentsEntryRole segmentsEntryRole =
-				(SegmentsEntryRole)session.get(
-					SegmentsEntryRoleImpl.class, primaryKey);
-
-			if (segmentsEntryRole == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEntryRoleException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(segmentsEntryRole);
-		}
-		catch (NoSuchEntryRoleException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -835,31 +747,6 @@ public class SegmentsEntryRolePersistenceImpl
 	}
 
 	/**
-	 * Returns the segments entry role with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the segments entry role
-	 * @return the segments entry role
-	 * @throws NoSuchEntryRoleException if a segments entry role with the primary key could not be found
-	 */
-	@Override
-	public SegmentsEntryRole findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEntryRoleException {
-
-		SegmentsEntryRole segmentsEntryRole = fetchByPrimaryKey(primaryKey);
-
-		if (segmentsEntryRole == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEntryRoleException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return segmentsEntryRole;
-	}
-
-	/**
 	 * Returns the segments entry role with the primary key or throws a <code>NoSuchEntryRoleException</code> if it could not be found.
 	 *
 	 * @param segmentsEntryRoleId the primary key of the segments entry role
@@ -873,53 +760,9 @@ public class SegmentsEntryRolePersistenceImpl
 		return findByPrimaryKey((Serializable)segmentsEntryRoleId);
 	}
 
-	/**
-	 * Returns the segments entry role with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the segments entry role
-	 * @return the segments entry role, or <code>null</code> if a segments entry role with the primary key could not be found
-	 */
 	@Override
-	public SegmentsEntryRole fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				SegmentsEntryRole.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		SegmentsEntryRole segmentsEntryRole =
-			(SegmentsEntryRole)entityCache.getResult(
-				SegmentsEntryRoleImpl.class, primaryKey);
-
-		if (segmentsEntryRole != null) {
-			return segmentsEntryRole;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			segmentsEntryRole = (SegmentsEntryRole)session.get(
-				SegmentsEntryRoleImpl.class, primaryKey);
-
-			if (segmentsEntryRole != null) {
-				cacheResult(segmentsEntryRole);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return segmentsEntryRole;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -931,133 +774,6 @@ public class SegmentsEntryRolePersistenceImpl
 	@Override
 	public SegmentsEntryRole fetchByPrimaryKey(long segmentsEntryRoleId) {
 		return fetchByPrimaryKey((Serializable)segmentsEntryRoleId);
-	}
-
-	@Override
-	public Map<Serializable, SegmentsEntryRole> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(SegmentsEntryRole.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, SegmentsEntryRole> map =
-			new HashMap<Serializable, SegmentsEntryRole>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			SegmentsEntryRole segmentsEntryRole = fetchByPrimaryKey(primaryKey);
-
-			if (segmentsEntryRole != null) {
-				map.put(primaryKey, segmentsEntryRole);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						SegmentsEntryRole.class, primaryKey)) {
-
-				SegmentsEntryRole segmentsEntryRole =
-					(SegmentsEntryRole)entityCache.getResult(
-						SegmentsEntryRoleImpl.class, primaryKey);
-
-				if (segmentsEntryRole == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, segmentsEntryRole);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (SegmentsEntryRole segmentsEntryRole :
-					(List<SegmentsEntryRole>)query.list()) {
-
-				map.put(
-					segmentsEntryRole.getPrimaryKeyObj(), segmentsEntryRole);
-
-				cacheResult(segmentsEntryRole);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1487,9 +1203,6 @@ public class SegmentsEntryRolePersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "segmentsEntryRole.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No SegmentsEntryRole exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No SegmentsEntryRole exists with the key {";
 
@@ -1502,4 +1215,4 @@ public class SegmentsEntryRolePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:746670956
+// LIFERAY-SERVICE-BUILDER-HASH:-215224627

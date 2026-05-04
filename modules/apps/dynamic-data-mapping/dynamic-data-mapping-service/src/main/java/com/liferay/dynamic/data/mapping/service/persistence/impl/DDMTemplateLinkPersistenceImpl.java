@@ -46,9 +46,7 @@ import java.lang.reflect.InvocationHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,7 +70,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = DDMTemplateLinkPersistence.class)
 public class DDMTemplateLinkPersistenceImpl
-	extends BasePersistenceImpl<DDMTemplateLink>
+	extends BasePersistenceImpl<DDMTemplateLink, NoSuchTemplateLinkException>
 	implements DDMTemplateLinkPersistence {
 
 	/*
@@ -413,49 +411,6 @@ public class DDMTemplateLinkPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all ddm template links.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(DDMTemplateLinkImpl.class);
-
-		finderCache.clearCache(DDMTemplateLinkImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the ddm template link.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DDMTemplateLink ddmTemplateLink) {
-		entityCache.removeResult(DDMTemplateLinkImpl.class, ddmTemplateLink);
-	}
-
-	@Override
-	public void clearCache(List<DDMTemplateLink> ddmTemplateLinks) {
-		for (DDMTemplateLink ddmTemplateLink : ddmTemplateLinks) {
-			entityCache.removeResult(
-				DDMTemplateLinkImpl.class, ddmTemplateLink);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(DDMTemplateLinkImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(DDMTemplateLinkImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DDMTemplateLinkModelImpl ddmTemplateLinkModelImpl) {
 
@@ -503,47 +458,6 @@ public class DDMTemplateLinkPersistenceImpl
 		throws NoSuchTemplateLinkException {
 
 		return remove((Serializable)templateLinkId);
-	}
-
-	/**
-	 * Removes the ddm template link with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the ddm template link
-	 * @return the ddm template link that was removed
-	 * @throws NoSuchTemplateLinkException if a ddm template link with the primary key could not be found
-	 */
-	@Override
-	public DDMTemplateLink remove(Serializable primaryKey)
-		throws NoSuchTemplateLinkException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DDMTemplateLink ddmTemplateLink = (DDMTemplateLink)session.get(
-				DDMTemplateLinkImpl.class, primaryKey);
-
-			if (ddmTemplateLink == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchTemplateLinkException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(ddmTemplateLink);
-		}
-		catch (NoSuchTemplateLinkException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -644,31 +558,6 @@ public class DDMTemplateLinkPersistenceImpl
 	}
 
 	/**
-	 * Returns the ddm template link with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm template link
-	 * @return the ddm template link
-	 * @throws NoSuchTemplateLinkException if a ddm template link with the primary key could not be found
-	 */
-	@Override
-	public DDMTemplateLink findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchTemplateLinkException {
-
-		DDMTemplateLink ddmTemplateLink = fetchByPrimaryKey(primaryKey);
-
-		if (ddmTemplateLink == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchTemplateLinkException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return ddmTemplateLink;
-	}
-
-	/**
 	 * Returns the ddm template link with the primary key or throws a <code>NoSuchTemplateLinkException</code> if it could not be found.
 	 *
 	 * @param templateLinkId the primary key of the ddm template link
@@ -682,53 +571,9 @@ public class DDMTemplateLinkPersistenceImpl
 		return findByPrimaryKey((Serializable)templateLinkId);
 	}
 
-	/**
-	 * Returns the ddm template link with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm template link
-	 * @return the ddm template link, or <code>null</code> if a ddm template link with the primary key could not be found
-	 */
 	@Override
-	public DDMTemplateLink fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				DDMTemplateLink.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DDMTemplateLink ddmTemplateLink =
-			(DDMTemplateLink)entityCache.getResult(
-				DDMTemplateLinkImpl.class, primaryKey);
-
-		if (ddmTemplateLink != null) {
-			return ddmTemplateLink;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ddmTemplateLink = (DDMTemplateLink)session.get(
-				DDMTemplateLinkImpl.class, primaryKey);
-
-			if (ddmTemplateLink != null) {
-				cacheResult(ddmTemplateLink);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return ddmTemplateLink;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -740,132 +585,6 @@ public class DDMTemplateLinkPersistenceImpl
 	@Override
 	public DDMTemplateLink fetchByPrimaryKey(long templateLinkId) {
 		return fetchByPrimaryKey((Serializable)templateLinkId);
-	}
-
-	@Override
-	public Map<Serializable, DDMTemplateLink> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(DDMTemplateLink.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DDMTemplateLink> map =
-			new HashMap<Serializable, DDMTemplateLink>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DDMTemplateLink ddmTemplateLink = fetchByPrimaryKey(primaryKey);
-
-			if (ddmTemplateLink != null) {
-				map.put(primaryKey, ddmTemplateLink);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						DDMTemplateLink.class, primaryKey)) {
-
-				DDMTemplateLink ddmTemplateLink =
-					(DDMTemplateLink)entityCache.getResult(
-						DDMTemplateLinkImpl.class, primaryKey);
-
-				if (ddmTemplateLink == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, ddmTemplateLink);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DDMTemplateLink ddmTemplateLink :
-					(List<DDMTemplateLink>)query.list()) {
-
-				map.put(ddmTemplateLink.getPrimaryKeyObj(), ddmTemplateLink);
-
-				cacheResult(ddmTemplateLink);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1256,9 +975,6 @@ public class DDMTemplateLinkPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "ddmTemplateLink.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DDMTemplateLink exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DDMTemplateLink exists with the key {";
 
@@ -1271,4 +987,4 @@ public class DDMTemplateLinkPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-444933485
+// LIFERAY-SERVICE-BUILDER-HASH:641237025

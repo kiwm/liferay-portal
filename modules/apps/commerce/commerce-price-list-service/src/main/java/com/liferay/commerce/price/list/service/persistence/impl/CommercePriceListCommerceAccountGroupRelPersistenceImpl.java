@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,9 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CommercePriceListCommerceAccountGroupRelPersistence.class)
 public class CommercePriceListCommerceAccountGroupRelPersistenceImpl
-	extends BasePersistenceImpl<CommercePriceListCommerceAccountGroupRel>
+	extends BasePersistenceImpl
+		<CommercePriceListCommerceAccountGroupRel,
+		 NoSuchPriceListCommerceAccountGroupRelException>
 	implements CommercePriceListCommerceAccountGroupRelPersistence {
 
 	/*
@@ -815,65 +816,6 @@ public class CommercePriceListCommerceAccountGroupRelPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all commerce price list commerce account group rels.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(
-			CommercePriceListCommerceAccountGroupRelImpl.class);
-
-		finderCache.clearCache(
-			CommercePriceListCommerceAccountGroupRelImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the commerce price list commerce account group rel.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(
-		CommercePriceListCommerceAccountGroupRel
-			commercePriceListCommerceAccountGroupRel) {
-
-		entityCache.removeResult(
-			CommercePriceListCommerceAccountGroupRelImpl.class,
-			commercePriceListCommerceAccountGroupRel);
-	}
-
-	@Override
-	public void clearCache(
-		List<CommercePriceListCommerceAccountGroupRel>
-			commercePriceListCommerceAccountGroupRels) {
-
-		for (CommercePriceListCommerceAccountGroupRel
-				commercePriceListCommerceAccountGroupRel :
-					commercePriceListCommerceAccountGroupRels) {
-
-			entityCache.removeResult(
-				CommercePriceListCommerceAccountGroupRelImpl.class,
-				commercePriceListCommerceAccountGroupRel);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(
-			CommercePriceListCommerceAccountGroupRelImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				CommercePriceListCommerceAccountGroupRelImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		CommercePriceListCommerceAccountGroupRelModelImpl
 			commercePriceListCommerceAccountGroupRelModelImpl) {
@@ -937,53 +879,6 @@ public class CommercePriceListCommerceAccountGroupRelPersistenceImpl
 		throws NoSuchPriceListCommerceAccountGroupRelException {
 
 		return remove((Serializable)commercePriceListCommerceAccountGroupRelId);
-	}
-
-	/**
-	 * Removes the commerce price list commerce account group rel with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the commerce price list commerce account group rel
-	 * @return the commerce price list commerce account group rel that was removed
-	 * @throws NoSuchPriceListCommerceAccountGroupRelException if a commerce price list commerce account group rel with the primary key could not be found
-	 */
-	@Override
-	public CommercePriceListCommerceAccountGroupRel remove(
-			Serializable primaryKey)
-		throws NoSuchPriceListCommerceAccountGroupRelException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CommercePriceListCommerceAccountGroupRel
-				commercePriceListCommerceAccountGroupRel =
-					(CommercePriceListCommerceAccountGroupRel)session.get(
-						CommercePriceListCommerceAccountGroupRelImpl.class,
-						primaryKey);
-
-			if (commercePriceListCommerceAccountGroupRel == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchPriceListCommerceAccountGroupRelException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(commercePriceListCommerceAccountGroupRel);
-		}
-		catch (NoSuchPriceListCommerceAccountGroupRelException
-					noSuchEntityException) {
-
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1143,34 +1038,6 @@ public class CommercePriceListCommerceAccountGroupRelPersistenceImpl
 	}
 
 	/**
-	 * Returns the commerce price list commerce account group rel with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the commerce price list commerce account group rel
-	 * @return the commerce price list commerce account group rel
-	 * @throws NoSuchPriceListCommerceAccountGroupRelException if a commerce price list commerce account group rel with the primary key could not be found
-	 */
-	@Override
-	public CommercePriceListCommerceAccountGroupRel findByPrimaryKey(
-			Serializable primaryKey)
-		throws NoSuchPriceListCommerceAccountGroupRelException {
-
-		CommercePriceListCommerceAccountGroupRel
-			commercePriceListCommerceAccountGroupRel = fetchByPrimaryKey(
-				primaryKey);
-
-		if (commercePriceListCommerceAccountGroupRel == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchPriceListCommerceAccountGroupRelException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return commercePriceListCommerceAccountGroupRel;
-	}
-
-	/**
 	 * Returns the commerce price list commerce account group rel with the primary key or throws a <code>NoSuchPriceListCommerceAccountGroupRelException</code> if it could not be found.
 	 *
 	 * @param commercePriceListCommerceAccountGroupRelId the primary key of the commerce price list commerce account group rel
@@ -1186,59 +1053,9 @@ public class CommercePriceListCommerceAccountGroupRelPersistenceImpl
 			(Serializable)commercePriceListCommerceAccountGroupRelId);
 	}
 
-	/**
-	 * Returns the commerce price list commerce account group rel with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the commerce price list commerce account group rel
-	 * @return the commerce price list commerce account group rel, or <code>null</code> if a commerce price list commerce account group rel with the primary key could not be found
-	 */
 	@Override
-	public CommercePriceListCommerceAccountGroupRel fetchByPrimaryKey(
-		Serializable primaryKey) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				CommercePriceListCommerceAccountGroupRel.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		CommercePriceListCommerceAccountGroupRel
-			commercePriceListCommerceAccountGroupRel =
-				(CommercePriceListCommerceAccountGroupRel)entityCache.getResult(
-					CommercePriceListCommerceAccountGroupRelImpl.class,
-					primaryKey);
-
-		if (commercePriceListCommerceAccountGroupRel != null) {
-			return commercePriceListCommerceAccountGroupRel;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			commercePriceListCommerceAccountGroupRel =
-				(CommercePriceListCommerceAccountGroupRel)session.get(
-					CommercePriceListCommerceAccountGroupRelImpl.class,
-					primaryKey);
-
-			if (commercePriceListCommerceAccountGroupRel != null) {
-				cacheResult(commercePriceListCommerceAccountGroupRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return commercePriceListCommerceAccountGroupRel;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1253,147 +1070,6 @@ public class CommercePriceListCommerceAccountGroupRelPersistenceImpl
 
 		return fetchByPrimaryKey(
 			(Serializable)commercePriceListCommerceAccountGroupRelId);
-	}
-
-	@Override
-	public Map<Serializable, CommercePriceListCommerceAccountGroupRel>
-		fetchByPrimaryKeys(Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				CommercePriceListCommerceAccountGroupRel.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, CommercePriceListCommerceAccountGroupRel> map =
-			new HashMap
-				<Serializable, CommercePriceListCommerceAccountGroupRel>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			CommercePriceListCommerceAccountGroupRel
-				commercePriceListCommerceAccountGroupRel = fetchByPrimaryKey(
-					primaryKey);
-
-			if (commercePriceListCommerceAccountGroupRel != null) {
-				map.put(primaryKey, commercePriceListCommerceAccountGroupRel);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						CommercePriceListCommerceAccountGroupRel.class,
-						primaryKey)) {
-
-				CommercePriceListCommerceAccountGroupRel
-					commercePriceListCommerceAccountGroupRel =
-						(CommercePriceListCommerceAccountGroupRel)
-							entityCache.getResult(
-								CommercePriceListCommerceAccountGroupRelImpl.
-									class,
-								primaryKey);
-
-				if (commercePriceListCommerceAccountGroupRel == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(
-						primaryKey, commercePriceListCommerceAccountGroupRel);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (CommercePriceListCommerceAccountGroupRel
-					commercePriceListCommerceAccountGroupRel :
-						(List<CommercePriceListCommerceAccountGroupRel>)
-							query.list()) {
-
-				map.put(
-					commercePriceListCommerceAccountGroupRel.getPrimaryKeyObj(),
-					commercePriceListCommerceAccountGroupRel);
-
-				cacheResult(commercePriceListCommerceAccountGroupRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1897,9 +1573,6 @@ public class CommercePriceListCommerceAccountGroupRelPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"commercePriceListCommerceAccountGroupRel.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CommercePriceListCommerceAccountGroupRel exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CommercePriceListCommerceAccountGroupRel exists with the key {";
 
@@ -1917,4 +1590,4 @@ public class CommercePriceListCommerceAccountGroupRelPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1035448985
+// LIFERAY-SERVICE-BUILDER-HASH:55628658

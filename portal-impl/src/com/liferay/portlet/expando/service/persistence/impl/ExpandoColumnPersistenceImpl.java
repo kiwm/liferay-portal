@@ -30,6 +30,7 @@ import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.security.permission.InlineSQLHelperUtil;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -56,7 +57,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -73,7 +73,7 @@ import java.util.Set;
  * @generated
  */
 public class ExpandoColumnPersistenceImpl
-	extends BasePersistenceImpl<ExpandoColumn>
+	extends BasePersistenceImpl<ExpandoColumn, NoSuchColumnException>
 	implements ExpandoColumnPersistence {
 
 	/*
@@ -1281,49 +1281,6 @@ public class ExpandoColumnPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all expando columns.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(ExpandoColumnImpl.class);
-
-		FinderCacheUtil.clearCache(ExpandoColumnImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the expando column.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(ExpandoColumn expandoColumn) {
-		EntityCacheUtil.removeResult(ExpandoColumnImpl.class, expandoColumn);
-	}
-
-	@Override
-	public void clearCache(List<ExpandoColumn> expandoColumns) {
-		for (ExpandoColumn expandoColumn : expandoColumns) {
-			EntityCacheUtil.removeResult(
-				ExpandoColumnImpl.class, expandoColumn);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(ExpandoColumnImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(ExpandoColumnImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		ExpandoColumnModelImpl expandoColumnModelImpl) {
 
@@ -1369,47 +1326,6 @@ public class ExpandoColumnPersistenceImpl
 	@Override
 	public ExpandoColumn remove(long columnId) throws NoSuchColumnException {
 		return remove((Serializable)columnId);
-	}
-
-	/**
-	 * Removes the expando column with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the expando column
-	 * @return the expando column that was removed
-	 * @throws NoSuchColumnException if a expando column with the primary key could not be found
-	 */
-	@Override
-	public ExpandoColumn remove(Serializable primaryKey)
-		throws NoSuchColumnException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ExpandoColumn expandoColumn = (ExpandoColumn)session.get(
-				ExpandoColumnImpl.class, primaryKey);
-
-			if (expandoColumn == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchColumnException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(expandoColumn);
-		}
-		catch (NoSuchColumnException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1523,31 +1439,6 @@ public class ExpandoColumnPersistenceImpl
 	}
 
 	/**
-	 * Returns the expando column with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the expando column
-	 * @return the expando column
-	 * @throws NoSuchColumnException if a expando column with the primary key could not be found
-	 */
-	@Override
-	public ExpandoColumn findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchColumnException {
-
-		ExpandoColumn expandoColumn = fetchByPrimaryKey(primaryKey);
-
-		if (expandoColumn == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchColumnException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return expandoColumn;
-	}
-
-	/**
 	 * Returns the expando column with the primary key or throws a <code>NoSuchColumnException</code> if it could not be found.
 	 *
 	 * @param columnId the primary key of the expando column
@@ -1561,52 +1452,9 @@ public class ExpandoColumnPersistenceImpl
 		return findByPrimaryKey((Serializable)columnId);
 	}
 
-	/**
-	 * Returns the expando column with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the expando column
-	 * @return the expando column, or <code>null</code> if a expando column with the primary key could not be found
-	 */
 	@Override
-	public ExpandoColumn fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				ExpandoColumn.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		ExpandoColumn expandoColumn = (ExpandoColumn)EntityCacheUtil.getResult(
-			ExpandoColumnImpl.class, primaryKey);
-
-		if (expandoColumn != null) {
-			return expandoColumn;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			expandoColumn = (ExpandoColumn)session.get(
-				ExpandoColumnImpl.class, primaryKey);
-
-			if (expandoColumn != null) {
-				cacheResult(expandoColumn);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return expandoColumn;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -1618,132 +1466,6 @@ public class ExpandoColumnPersistenceImpl
 	@Override
 	public ExpandoColumn fetchByPrimaryKey(long columnId) {
 		return fetchByPrimaryKey((Serializable)columnId);
-	}
-
-	@Override
-	public Map<Serializable, ExpandoColumn> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(ExpandoColumn.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, ExpandoColumn> map =
-			new HashMap<Serializable, ExpandoColumn>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			ExpandoColumn expandoColumn = fetchByPrimaryKey(primaryKey);
-
-			if (expandoColumn != null) {
-				map.put(primaryKey, expandoColumn);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						ExpandoColumn.class, primaryKey)) {
-
-				ExpandoColumn expandoColumn =
-					(ExpandoColumn)EntityCacheUtil.getResult(
-						ExpandoColumnImpl.class, primaryKey);
-
-				if (expandoColumn == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, expandoColumn);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (ExpandoColumn expandoColumn :
-					(List<ExpandoColumn>)query.list()) {
-
-				map.put(expandoColumn.getPrimaryKeyObj(), expandoColumn);
-
-				cacheResult(expandoColumn);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2144,9 +1866,6 @@ public class ExpandoColumnPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "ExpandoColumn.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No ExpandoColumn exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No ExpandoColumn exists with the key {";
 
@@ -2162,4 +1881,4 @@ public class ExpandoColumnPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:355408035
+// LIFERAY-SERVICE-BUILDER-HASH:-2055538424

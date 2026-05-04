@@ -63,6 +63,7 @@ const test = mergeTests(
 	isolatedSiteTest,
 	editObjectDefinitionPagesTest,
 	featureFlagsTest({
+		'LPD-83570': {enabled: true}, // Phone Number field
 		'LPS-178052': {enabled: true},
 	}),
 	globalMenuPagesTest,
@@ -521,6 +522,8 @@ cmsTest.describe('Manage attachment ObjectField storage locations', () => {
 
 			await viewObjectEntriesPage.selectFileButton.first().click();
 
+			await page.getByRole('img', {name: spaceName}).click();
+
 			await page.getByLabel(fileTitle, {exact: true}).click();
 
 			await page
@@ -544,6 +547,100 @@ cmsTest.describe('Manage attachment ObjectField storage locations', () => {
 			await expect(
 				viewObjectEntriesPage.page.getByText(fileName)
 			).toBeVisible();
+
+			await expect(
+				viewObjectEntriesPage.page.getByText('astronaut.png')
+			).toBeVisible();
+		}
+	);
+
+	cmsTest(
+		'can upload file to CMS through CMSFilesItemSelector',
+		async ({apiHelpers, page, viewObjectEntriesPage}) => {
+			const spaceName = getRandomString();
+
+			await test.step('Create a new Space', async () => {
+				await apiHelpers.headlessAssetLibrary.createAssetLibrary({
+					name: spaceName,
+					settings: {},
+					type: 'Space',
+				});
+			});
+
+			const objectFields = generateObjectFields({
+				objectFieldBusinessTypes: [
+					{
+						businessType: 'Attachment',
+						name: 'cmsBasicDocument',
+						objectFieldSettings: [
+							{
+								name: 'acceptedFileExtensions',
+								value: 'jpeg, jpg, pdf, png, txt',
+							},
+							{
+								name: 'maximumFileSize',
+								value: 0,
+							},
+							{
+								name: 'fileSource',
+								value: 'CMSBasicDocument',
+							},
+						],
+					},
+				],
+			});
+
+			const objectDefinition =
+				await apiHelpers.objectAdmin.postRandomObjectDefinition({
+					objectFields,
+					status: {code: 0},
+				});
+
+			apiHelpers.data.push({
+				id: objectDefinition.id,
+				type: 'objectDefinition',
+			});
+
+			await viewObjectEntriesPage.goto(objectDefinition.className);
+
+			await viewObjectEntriesPage.clickAddObjectEntry(
+				objectDefinition.label['en_US']
+			);
+
+			await viewObjectEntriesPage.selectFileButton.first().click();
+
+			await page.getByRole('img', {name: spaceName}).click();
+
+			await page
+				.getByTestId('managementToolbar')
+				.locator('[data-testid="fdsCreationActionButton"]')
+				.click();
+
+			const fileChooserPromise = page.waitForEvent('filechooser');
+
+			await page.getByRole('button', {name: 'Select Files'}).click();
+
+			const fileChooser = await fileChooserPromise;
+
+			await fileChooser.setFiles(
+				path.join(__dirname, '../dependencies', 'astronaut.png')
+			);
+
+			await page.getByRole('button', {name: 'Upload (1)'}).click();
+
+			await page.getByLabel('astronaut.png', {exact: true}).click();
+
+			await page
+				.getByRole('button', {exact: true, name: 'Select'})
+				.click();
+
+			await page
+				.getByRole('button', {name: 'astronaut.png'})
+				.waitFor({state: 'visible'});
+
+			await viewObjectEntriesPage.saveObjectEntryButton.click();
+
+			await waitForAlert(page);
 
 			await expect(
 				viewObjectEntriesPage.page.getByText('astronaut.png')
@@ -727,6 +824,8 @@ cmsTest.describe('Manage attachment ObjectField storage locations', () => {
 			);
 
 			await viewObjectEntriesPage.selectFileButton.click();
+
+			await page.getByRole('img', {name: space.name}).click();
 
 			await expect(page.getByText('No Results Found')).toBeVisible();
 		}
@@ -2403,6 +2502,90 @@ test.describe('Manage object entries through View Object Entries', () => {
 		}
 	);
 
+	test('can cancel entry update', async ({
+		apiHelpers,
+		page,
+		viewObjectEntriesPage,
+	}) => {
+		const objectDefinition =
+			await apiHelpers.objectAdmin.postRandomObjectDefinition({
+				objectFields: [
+					{
+						DBType: 'String',
+						businessType: 'Text',
+						label: {en_US: 'Field'},
+						name: 'textField',
+						required: false,
+					},
+				],
+				status: {code: 0},
+			});
+
+		apiHelpers.data.push({
+			id: objectDefinition.id,
+			type: 'objectDefinition',
+		});
+
+		await apiHelpers.objectEntry.postObjectEntry(
+			{textField: 'Test Entry'},
+			'c/' + objectDefinition.name.toLowerCase() + 's'
+		);
+
+		await viewObjectEntriesPage.goto(objectDefinition.className);
+
+		await viewObjectEntriesPage.frontendDatasetItems.first().click();
+
+		await page.getByLabel('Field', {exact: true}).clear();
+
+		await viewObjectEntriesPage.fillObjectEntry({
+			objectFieldLabel: 'Field',
+			objectFieldValue: 'Test Entry 2',
+		});
+
+		await viewObjectEntriesPage.cancelObjectEntryButton.click();
+
+		await expect(page.getByText('Test Entry 2')).not.toBeVisible();
+
+		await expect(page.getByText('Test Entry')).toBeVisible();
+	});
+
+	test('can change columns to be displayed on auto-generated table', async ({
+		apiHelpers,
+		page,
+		viewObjectEntriesPage,
+	}) => {
+		const objectDefinition =
+			await apiHelpers.objectAdmin.postRandomObjectDefinition({
+				status: {code: 0},
+			});
+
+		apiHelpers.data.push({
+			id: objectDefinition.id,
+			type: 'objectDefinition',
+		});
+
+		await apiHelpers.objectEntry.postObjectEntry(
+			{textField: 'Test text'},
+			'c/' + objectDefinition.name.toLowerCase() + 's'
+		);
+
+		await viewObjectEntriesPage.goto(objectDefinition.className);
+
+		await expect(
+			page.getByRole('columnheader').getByText('ID')
+		).toBeVisible();
+
+		await page.getByLabel('Manage Columns Visibility').click();
+
+		await page.getByRole('menuitem', {name: 'ID'}).click();
+
+		await page.keyboard.press('Escape');
+
+		await expect(
+			page.getByRole('columnheader').getByText('ID')
+		).not.toBeVisible();
+	});
+
 	test('can create an object entry with aggregation field', async ({
 		apiHelpers,
 		objectFieldsPage,
@@ -3407,6 +3590,47 @@ test.describe('Manage object entries through View Object Entries', () => {
 		await expect(page.getByText(account2.name)).toBeVisible();
 	});
 
+	test('can order auto-generated table by entry', async ({
+		apiHelpers,
+		page,
+		viewObjectEntriesPage,
+	}) => {
+		const objectDefinition =
+			await apiHelpers.objectAdmin.postRandomObjectDefinition({
+				status: {code: 0},
+			});
+
+		apiHelpers.data.push({
+			id: objectDefinition.id,
+			type: 'objectDefinition',
+		});
+
+		for (const number of ['1', '2']) {
+			await apiHelpers.objectEntry.postObjectEntry(
+				{textField: `Test text ${number}`},
+				'c/' + objectDefinition.name.toLowerCase() + 's'
+			);
+		}
+
+		await viewObjectEntriesPage.goto(objectDefinition.className);
+
+		const textHeader = page.getByRole('columnheader', {name: 'textField'});
+
+		await textHeader.click();
+
+		const rows = page
+			.getByRole('row')
+			.filter({hasNot: page.getByRole('columnheader')});
+
+		await expect(rows.first()).toContainText('Test text 1');
+		await expect(rows.last()).toContainText('Test text 2');
+
+		await textHeader.click();
+
+		await expect(rows.first()).toContainText('Test text 2');
+		await expect(rows.last()).toContainText('Test text 1');
+	});
+
 	test('can prevent duplicate value when creating an entry with unique values', async ({
 		apiHelpers,
 		page,
@@ -3536,6 +3760,46 @@ test.describe('Manage object entries through View Object Entries', () => {
 			`Error:The ${objectFieldLabel} is already in use. Please enter a unique ${objectFieldLabel}.`,
 			{type: 'danger'}
 		);
+	});
+
+	test('can search for an entry on auto-generated table', async ({
+		apiHelpers,
+		page,
+		viewObjectEntriesPage,
+	}) => {
+		const objectDefinition =
+			await apiHelpers.objectAdmin.postRandomObjectDefinition({
+				status: {code: 0},
+			});
+
+		apiHelpers.data.push({
+			id: objectDefinition.id,
+			type: 'objectDefinition',
+		});
+
+		await apiHelpers.objectEntry.postObjectEntry(
+			{textField: 'Test 1'},
+			'c/' + objectDefinition.name.toLowerCase() + 's'
+		);
+
+		await apiHelpers.objectEntry.postObjectEntry(
+			{textField: 'Entry 2'},
+			'c/' + objectDefinition.name.toLowerCase() + 's'
+		);
+
+		await viewObjectEntriesPage.goto(objectDefinition.className);
+
+		await page.getByPlaceholder('Search').fill('Entry 2');
+
+		await page.getByPlaceholder('Search').press('Enter');
+
+		await expect(
+			page.getByRole('table').getByText('Entry 2')
+		).toBeVisible();
+
+		await expect(
+			page.getByRole('table').getByText('Test 1')
+		).not.toBeVisible();
 	});
 
 	test('can set picklist default value via expression builder', async ({
@@ -4155,6 +4419,50 @@ test.describe('Manage object entries through View Object Entries', () => {
 		}
 	);
 
+	test('columns ID, Fields and Status are displayed', async ({
+		apiHelpers,
+		page,
+		viewObjectEntriesPage,
+	}) => {
+		const objectDefinition =
+			await apiHelpers.objectAdmin.postRandomObjectDefinition({
+				objectFields: [
+					{
+						DBType: 'String',
+						businessType: 'Text',
+						label: {en_US: 'Field'},
+						name: 'textField',
+						required: false,
+					},
+				],
+				status: {code: 0},
+			});
+
+		apiHelpers.data.push({
+			id: objectDefinition.id,
+			type: 'objectDefinition',
+		});
+
+		await apiHelpers.objectEntry.postObjectEntry(
+			{textField: 'String'},
+			'c/' + objectDefinition.name.toLowerCase() + 's'
+		);
+
+		await viewObjectEntriesPage.goto(objectDefinition.className);
+
+		await expect(
+			page.getByRole('columnheader').getByText('ID')
+		).toBeVisible();
+
+		await expect(
+			page.getByRole('columnheader').getByText('Field')
+		).toBeVisible();
+
+		await expect(
+			page.getByRole('columnheader').getByText('Status')
+		).toBeVisible();
+	});
+
 	test(
 		'different versions of Commerce Products have same input values when used as relationship of an object entry',
 		{tag: '@LPD-65249'},
@@ -4334,6 +4642,55 @@ test.describe('Manage object entries through View Object Entries', () => {
 		await expect(
 			page.locator('td').getByText('test', {exact: true})
 		).toHaveCount(1);
+	});
+
+	test('empty state is displayed when no entry exists', async ({
+		apiHelpers,
+		page,
+		viewObjectEntriesPage,
+	}) => {
+		const objectDefinition =
+			await apiHelpers.objectAdmin.postRandomObjectDefinition({
+				status: {code: 0},
+			});
+
+		apiHelpers.data.push({
+			id: objectDefinition.id,
+			type: 'objectDefinition',
+		});
+
+		await viewObjectEntriesPage.goto(objectDefinition.className);
+
+		await expect(page.getByText('No Results Found')).toBeVisible();
+	});
+
+	test('empty state is displayed when searching for nonexistent value', async ({
+		apiHelpers,
+		page,
+		viewObjectEntriesPage,
+	}) => {
+		const objectDefinition =
+			await apiHelpers.objectAdmin.postRandomObjectDefinition({
+				status: {code: 0},
+			});
+
+		apiHelpers.data.push({
+			id: objectDefinition.id,
+			type: 'objectDefinition',
+		});
+
+		await apiHelpers.objectEntry.postObjectEntry(
+			{textField: 'Test text'},
+			'c/' + objectDefinition.name.toLowerCase() + 's'
+		);
+
+		await viewObjectEntriesPage.goto(objectDefinition.className);
+
+		await page.getByPlaceholder('Search').fill('Lorem ipsum');
+
+		await page.getByPlaceholder('Search').press('Enter');
+
+		await expect(page.getByText('No Results Found')).toBeVisible();
 	});
 
 	test('error message is displayed in the language of the site context', async ({
@@ -5060,6 +5417,230 @@ test.describe('Manage object entries through View Object Entries', () => {
 			page.getByRole('cell', {name: secondItemName})
 		).toBeVisible();
 	});
+
+	test(
+		'can add an entry with phone number object field where prefix type is defined by user',
+		{tag: ['@LPD-83570']},
+		async ({apiHelpers, page, viewObjectEntriesPage}) => {
+			const localNumber = '1231231234';
+			const objectFieldLabel = `phoneNumber${getRandomInt()}`;
+			const prefix = '+1';
+
+			const fieldContainer = page.locator(
+				`[data-field-name="${objectFieldLabel}"]`
+			);
+
+			let objectDefinition: ObjectDefinition;
+
+			await test.step('Create an object definition', async () => {
+				const objectDefinitionAPIClient =
+					await apiHelpers.buildRestClient(ObjectDefinitionAPI);
+
+				const response =
+					await objectDefinitionAPIClient.postObjectDefinition({
+						active: true,
+						externalReferenceCode: getRandomString(),
+						label: {
+							en_US: getRandomString(),
+						},
+						name: 'ObjectDefinitionName' + getRandomInt(),
+						objectFields: [
+							{
+								DBType: 'String' as const,
+								businessType: 'PhoneNumber' as const,
+								indexedAsKeyword: false,
+								indexedLanguageId: '',
+								label: {en_US: objectFieldLabel},
+								localized: false,
+								name: objectFieldLabel,
+								objectFieldSettings: [
+									{
+										name: 'prefixType',
+										value: 'definedByUser',
+									},
+								] as any,
+								readOnly: 'false',
+								readOnlyConditionExpression: '',
+								required: false,
+								state: false,
+								system: false,
+								type: 'String' as const,
+								unique: false,
+							},
+						],
+						panelCategoryKey: 'control_panel.object',
+						pluralLabel: {
+							en_US: 'NewObject',
+						},
+						portlet: true,
+						scope: 'company',
+						status: {
+							code: 0,
+						},
+					});
+
+				objectDefinition = response.body;
+
+				apiHelpers.data.push({
+					id: objectDefinition.id,
+					type: 'objectDefinition',
+				});
+			});
+
+			await test.step('Navigate to the object definition and add an entry', async () => {
+				await viewObjectEntriesPage.goto(objectDefinition.className);
+
+				await viewObjectEntriesPage.clickAddObjectEntry(
+					objectDefinition.label['en_US']
+				);
+			});
+
+			await test.step('Select the "United States" prefix, fill the phone number field, and save the entry', async () => {
+				await fieldContainer.getByRole('combobox').click();
+
+				await page.getByRole('option', {name: /United States/}).click();
+
+				await expect(fieldContainer.getByText(prefix)).toBeVisible();
+
+				await fieldContainer
+					.locator('input[type="tel"]')
+					.fill(localNumber);
+
+				await viewObjectEntriesPage.saveObjectEntryButton.click();
+
+				await expect(
+					viewObjectEntriesPage.successMessage
+				).toBeVisible();
+			});
+
+			await test.step('Verify the phone number field values are saved', async () => {
+				await viewObjectEntriesPage.backButton.click();
+
+				await viewObjectEntriesPage.frontendDatasetItems
+					.first()
+					.click();
+
+				await expect(fieldContainer.getByRole('combobox')).toHaveText(
+					prefix
+				);
+
+				await expect(
+					fieldContainer.locator('input[type="tel"]')
+				).toHaveValue(localNumber);
+			});
+		}
+	);
+
+	test(
+		'can add an entry with phone number object field where prefix type is fixed',
+		{tag: ['@LPD-83570']},
+		async ({apiHelpers, page, viewObjectEntriesPage}) => {
+			const localNumber = '11987654321';
+			const objectFieldLabel = `phoneNumber${getRandomInt()}`;
+			const prefix = '+1';
+
+			const fieldContainer = page.locator(
+				`[data-field-name="${objectFieldLabel}"]`
+			);
+
+			let objectDefinition: ObjectDefinition;
+
+			await test.step('Create an object definition', async () => {
+				const objectDefinitionAPIClient =
+					await apiHelpers.buildRestClient(ObjectDefinitionAPI);
+
+				const response =
+					await objectDefinitionAPIClient.postObjectDefinition({
+						active: true,
+						externalReferenceCode: getRandomString(),
+						label: {
+							en_US: getRandomString(),
+						},
+						name: 'ObjectDefinitionName' + getRandomInt(),
+						objectFields: [
+							{
+								DBType: 'String' as const,
+								businessType: 'PhoneNumber' as const,
+								indexedAsKeyword: false,
+								indexedLanguageId: '',
+								label: {en_US: objectFieldLabel},
+								localized: false,
+								name: objectFieldLabel,
+								objectFieldSettings: [
+									{
+										name: 'prefixType',
+										value: 'fixed',
+									},
+									{
+										name: 'prefix',
+										value: prefix,
+									},
+								] as any,
+								readOnly: 'false',
+								readOnlyConditionExpression: '',
+								required: false,
+								state: false,
+								system: false,
+								type: 'String' as const,
+								unique: false,
+							},
+						],
+						panelCategoryKey: 'control_panel.object',
+						pluralLabel: {
+							en_US: 'NewObject',
+						},
+						portlet: true,
+						scope: 'company',
+						status: {
+							code: 0,
+						},
+					});
+
+				objectDefinition = response.body;
+
+				apiHelpers.data.push({
+					id: objectDefinition.id,
+					type: 'objectDefinition',
+				});
+			});
+
+			await test.step('Navigate to the object definition and add an entry', async () => {
+				await viewObjectEntriesPage.goto(objectDefinition.className);
+
+				await viewObjectEntriesPage.clickAddObjectEntry(
+					objectDefinition.label['en_US']
+				);
+			});
+
+			await test.step('Fill the phone number field and save the entry', async () => {
+				await expect(fieldContainer.getByText(prefix)).toBeVisible();
+
+				await fieldContainer
+					.locator('input[type="tel"]')
+					.fill(localNumber);
+
+				await viewObjectEntriesPage.saveObjectEntryButton.click();
+
+				await expect(
+					viewObjectEntriesPage.successMessage
+				).toBeVisible();
+			});
+
+			await test.step('Verify the phone number field values are saved', async () => {
+				await viewObjectEntriesPage.backButton.click();
+
+				await viewObjectEntriesPage.frontendDatasetItems
+					.first()
+					.click();
+
+				await expect(fieldContainer.getByText(prefix)).toBeVisible();
+
+				await expect(
+					fieldContainer.locator('input[type="tel"]')
+				).toHaveValue(localNumber);
+			});
+		}
+	);
 });
 
 ckEditor4Test.describe('Manage object entries with CKEditor 4', () => {

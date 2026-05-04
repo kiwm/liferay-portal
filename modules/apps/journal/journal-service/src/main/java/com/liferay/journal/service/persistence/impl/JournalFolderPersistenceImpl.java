@@ -64,7 +64,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -89,7 +88,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = JournalFolderPersistence.class)
 public class JournalFolderPersistenceImpl
-	extends BasePersistenceImpl<JournalFolder>
+	extends BasePersistenceImpl<JournalFolder, NoSuchFolderException>
 	implements JournalFolderPersistence {
 
 	/*
@@ -3036,48 +3035,6 @@ public class JournalFolderPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all journal folders.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(JournalFolderImpl.class);
-
-		finderCache.clearCache(JournalFolderImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the journal folder.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(JournalFolder journalFolder) {
-		entityCache.removeResult(JournalFolderImpl.class, journalFolder);
-	}
-
-	@Override
-	public void clearCache(List<JournalFolder> journalFolders) {
-		for (JournalFolder journalFolder : journalFolders) {
-			entityCache.removeResult(JournalFolderImpl.class, journalFolder);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(JournalFolderImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(JournalFolderImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		JournalFolderModelImpl journalFolderModelImpl) {
 
@@ -3152,47 +3109,6 @@ public class JournalFolderPersistenceImpl
 	@Override
 	public JournalFolder remove(long folderId) throws NoSuchFolderException {
 		return remove((Serializable)folderId);
-	}
-
-	/**
-	 * Removes the journal folder with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the journal folder
-	 * @return the journal folder that was removed
-	 * @throws NoSuchFolderException if a journal folder with the primary key could not be found
-	 */
-	@Override
-	public JournalFolder remove(Serializable primaryKey)
-		throws NoSuchFolderException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			JournalFolder journalFolder = (JournalFolder)session.get(
-				JournalFolderImpl.class, primaryKey);
-
-			if (journalFolder == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchFolderException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(journalFolder);
-		}
-		catch (NoSuchFolderException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -3384,31 +3300,6 @@ public class JournalFolderPersistenceImpl
 	}
 
 	/**
-	 * Returns the journal folder with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the journal folder
-	 * @return the journal folder
-	 * @throws NoSuchFolderException if a journal folder with the primary key could not be found
-	 */
-	@Override
-	public JournalFolder findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchFolderException {
-
-		JournalFolder journalFolder = fetchByPrimaryKey(primaryKey);
-
-		if (journalFolder == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchFolderException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return journalFolder;
-	}
-
-	/**
 	 * Returns the journal folder with the primary key or throws a <code>NoSuchFolderException</code> if it could not be found.
 	 *
 	 * @param folderId the primary key of the journal folder
@@ -3422,52 +3313,9 @@ public class JournalFolderPersistenceImpl
 		return findByPrimaryKey((Serializable)folderId);
 	}
 
-	/**
-	 * Returns the journal folder with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the journal folder
-	 * @return the journal folder, or <code>null</code> if a journal folder with the primary key could not be found
-	 */
 	@Override
-	public JournalFolder fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				JournalFolder.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		JournalFolder journalFolder = (JournalFolder)entityCache.getResult(
-			JournalFolderImpl.class, primaryKey);
-
-		if (journalFolder != null) {
-			return journalFolder;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			journalFolder = (JournalFolder)session.get(
-				JournalFolderImpl.class, primaryKey);
-
-			if (journalFolder != null) {
-				cacheResult(journalFolder);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return journalFolder;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -3479,132 +3327,6 @@ public class JournalFolderPersistenceImpl
 	@Override
 	public JournalFolder fetchByPrimaryKey(long folderId) {
 		return fetchByPrimaryKey((Serializable)folderId);
-	}
-
-	@Override
-	public Map<Serializable, JournalFolder> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(JournalFolder.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, JournalFolder> map =
-			new HashMap<Serializable, JournalFolder>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			JournalFolder journalFolder = fetchByPrimaryKey(primaryKey);
-
-			if (journalFolder != null) {
-				map.put(primaryKey, journalFolder);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						JournalFolder.class, primaryKey)) {
-
-				JournalFolder journalFolder =
-					(JournalFolder)entityCache.getResult(
-						JournalFolderImpl.class, primaryKey);
-
-				if (journalFolder == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, journalFolder);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (JournalFolder journalFolder :
-					(List<JournalFolder>)query.list()) {
-
-				map.put(journalFolder.getPrimaryKeyObj(), journalFolder);
-
-				cacheResult(journalFolder);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -4352,9 +4074,6 @@ public class JournalFolderPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "JournalFolder.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No JournalFolder exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No JournalFolder exists with the key {";
 
@@ -4370,4 +4089,4 @@ public class JournalFolderPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-856242895
+// LIFERAY-SERVICE-BUILDER-HASH:1965268283

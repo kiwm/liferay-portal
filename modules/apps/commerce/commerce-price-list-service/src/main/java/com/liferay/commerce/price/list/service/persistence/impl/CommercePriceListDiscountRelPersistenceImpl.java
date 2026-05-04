@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CommercePriceListDiscountRelPersistence.class)
 public class CommercePriceListDiscountRelPersistenceImpl
-	extends BasePersistenceImpl<CommercePriceListDiscountRel>
+	extends BasePersistenceImpl
+		<CommercePriceListDiscountRel, NoSuchPriceListDiscountRelException>
 	implements CommercePriceListDiscountRelPersistence {
 
 	/*
@@ -776,59 +776,6 @@ public class CommercePriceListDiscountRelPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all commerce price list discount rels.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CommercePriceListDiscountRelImpl.class);
-
-		finderCache.clearCache(CommercePriceListDiscountRelImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the commerce price list discount rel.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(
-		CommercePriceListDiscountRel commercePriceListDiscountRel) {
-
-		entityCache.removeResult(
-			CommercePriceListDiscountRelImpl.class,
-			commercePriceListDiscountRel);
-	}
-
-	@Override
-	public void clearCache(
-		List<CommercePriceListDiscountRel> commercePriceListDiscountRels) {
-
-		for (CommercePriceListDiscountRel commercePriceListDiscountRel :
-				commercePriceListDiscountRels) {
-
-			entityCache.removeResult(
-				CommercePriceListDiscountRelImpl.class,
-				commercePriceListDiscountRel);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CommercePriceListDiscountRelImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				CommercePriceListDiscountRelImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		CommercePriceListDiscountRelModelImpl
 			commercePriceListDiscountRelModelImpl) {
@@ -889,48 +836,6 @@ public class CommercePriceListDiscountRelPersistenceImpl
 		throws NoSuchPriceListDiscountRelException {
 
 		return remove((Serializable)commercePriceListDiscountRelId);
-	}
-
-	/**
-	 * Removes the commerce price list discount rel with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the commerce price list discount rel
-	 * @return the commerce price list discount rel that was removed
-	 * @throws NoSuchPriceListDiscountRelException if a commerce price list discount rel with the primary key could not be found
-	 */
-	@Override
-	public CommercePriceListDiscountRel remove(Serializable primaryKey)
-		throws NoSuchPriceListDiscountRelException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CommercePriceListDiscountRel commercePriceListDiscountRel =
-				(CommercePriceListDiscountRel)session.get(
-					CommercePriceListDiscountRelImpl.class, primaryKey);
-
-			if (commercePriceListDiscountRel == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchPriceListDiscountRelException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(commercePriceListDiscountRel);
-		}
-		catch (NoSuchPriceListDiscountRelException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1075,33 +980,6 @@ public class CommercePriceListDiscountRelPersistenceImpl
 	}
 
 	/**
-	 * Returns the commerce price list discount rel with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the commerce price list discount rel
-	 * @return the commerce price list discount rel
-	 * @throws NoSuchPriceListDiscountRelException if a commerce price list discount rel with the primary key could not be found
-	 */
-	@Override
-	public CommercePriceListDiscountRel findByPrimaryKey(
-			Serializable primaryKey)
-		throws NoSuchPriceListDiscountRelException {
-
-		CommercePriceListDiscountRel commercePriceListDiscountRel =
-			fetchByPrimaryKey(primaryKey);
-
-		if (commercePriceListDiscountRel == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchPriceListDiscountRelException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return commercePriceListDiscountRel;
-	}
-
-	/**
 	 * Returns the commerce price list discount rel with the primary key or throws a <code>NoSuchPriceListDiscountRelException</code> if it could not be found.
 	 *
 	 * @param commercePriceListDiscountRelId the primary key of the commerce price list discount rel
@@ -1116,56 +994,9 @@ public class CommercePriceListDiscountRelPersistenceImpl
 		return findByPrimaryKey((Serializable)commercePriceListDiscountRelId);
 	}
 
-	/**
-	 * Returns the commerce price list discount rel with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the commerce price list discount rel
-	 * @return the commerce price list discount rel, or <code>null</code> if a commerce price list discount rel with the primary key could not be found
-	 */
 	@Override
-	public CommercePriceListDiscountRel fetchByPrimaryKey(
-		Serializable primaryKey) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				CommercePriceListDiscountRel.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		CommercePriceListDiscountRel commercePriceListDiscountRel =
-			(CommercePriceListDiscountRel)entityCache.getResult(
-				CommercePriceListDiscountRelImpl.class, primaryKey);
-
-		if (commercePriceListDiscountRel != null) {
-			return commercePriceListDiscountRel;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			commercePriceListDiscountRel =
-				(CommercePriceListDiscountRel)session.get(
-					CommercePriceListDiscountRelImpl.class, primaryKey);
-
-			if (commercePriceListDiscountRel != null) {
-				cacheResult(commercePriceListDiscountRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return commercePriceListDiscountRel;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1179,137 +1010,6 @@ public class CommercePriceListDiscountRelPersistenceImpl
 		long commercePriceListDiscountRelId) {
 
 		return fetchByPrimaryKey((Serializable)commercePriceListDiscountRelId);
-	}
-
-	@Override
-	public Map<Serializable, CommercePriceListDiscountRel> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				CommercePriceListDiscountRel.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, CommercePriceListDiscountRel> map =
-			new HashMap<Serializable, CommercePriceListDiscountRel>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			CommercePriceListDiscountRel commercePriceListDiscountRel =
-				fetchByPrimaryKey(primaryKey);
-
-			if (commercePriceListDiscountRel != null) {
-				map.put(primaryKey, commercePriceListDiscountRel);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						CommercePriceListDiscountRel.class, primaryKey)) {
-
-				CommercePriceListDiscountRel commercePriceListDiscountRel =
-					(CommercePriceListDiscountRel)entityCache.getResult(
-						CommercePriceListDiscountRelImpl.class, primaryKey);
-
-				if (commercePriceListDiscountRel == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, commercePriceListDiscountRel);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (CommercePriceListDiscountRel commercePriceListDiscountRel :
-					(List<CommercePriceListDiscountRel>)query.list()) {
-
-				map.put(
-					commercePriceListDiscountRel.getPrimaryKeyObj(),
-					commercePriceListDiscountRel);
-
-				cacheResult(commercePriceListDiscountRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1795,9 +1495,6 @@ public class CommercePriceListDiscountRelPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"commercePriceListDiscountRel.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CommercePriceListDiscountRel exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CommercePriceListDiscountRel exists with the key {";
 
@@ -1813,4 +1510,4 @@ public class CommercePriceListDiscountRelPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1770247151
+// LIFERAY-SERVICE-BUILDER-HASH:-1094921112

@@ -25,6 +25,7 @@ import com.liferay.portal.kernel.model.PortletPreferencesTable;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.persistence.PortletPreferencesPersistence;
 import com.liferay.portal.kernel.service.persistence.PortletPreferencesUtil;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -45,9 +46,7 @@ import java.lang.reflect.InvocationHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,7 +62,8 @@ import java.util.Set;
  * @generated
  */
 public class PortletPreferencesPersistenceImpl
-	extends BasePersistenceImpl<PortletPreferences>
+	extends BasePersistenceImpl
+		<PortletPreferences, NoSuchPortletPreferencesException>
 	implements PortletPreferencesPersistence {
 
 	/*
@@ -1829,51 +1829,6 @@ public class PortletPreferencesPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all portlet preferenceses.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(PortletPreferencesImpl.class);
-
-		FinderCacheUtil.clearCache(PortletPreferencesImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the portlet preferences.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(PortletPreferences portletPreferences) {
-		EntityCacheUtil.removeResult(
-			PortletPreferencesImpl.class, portletPreferences);
-	}
-
-	@Override
-	public void clearCache(List<PortletPreferences> portletPreferenceses) {
-		for (PortletPreferences portletPreferences : portletPreferenceses) {
-			EntityCacheUtil.removeResult(
-				PortletPreferencesImpl.class, portletPreferences);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(PortletPreferencesImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(
-				PortletPreferencesImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		PortletPreferencesModelImpl portletPreferencesModelImpl) {
 
@@ -1923,48 +1878,6 @@ public class PortletPreferencesPersistenceImpl
 		throws NoSuchPortletPreferencesException {
 
 		return remove((Serializable)portletPreferencesId);
-	}
-
-	/**
-	 * Removes the portlet preferences with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the portlet preferences
-	 * @return the portlet preferences that was removed
-	 * @throws NoSuchPortletPreferencesException if a portlet preferences with the primary key could not be found
-	 */
-	@Override
-	public PortletPreferences remove(Serializable primaryKey)
-		throws NoSuchPortletPreferencesException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			PortletPreferences portletPreferences =
-				(PortletPreferences)session.get(
-					PortletPreferencesImpl.class, primaryKey);
-
-			if (portletPreferences == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchPortletPreferencesException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(portletPreferences);
-		}
-		catch (NoSuchPortletPreferencesException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -2070,31 +1983,6 @@ public class PortletPreferencesPersistenceImpl
 	}
 
 	/**
-	 * Returns the portlet preferences with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the portlet preferences
-	 * @return the portlet preferences
-	 * @throws NoSuchPortletPreferencesException if a portlet preferences with the primary key could not be found
-	 */
-	@Override
-	public PortletPreferences findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchPortletPreferencesException {
-
-		PortletPreferences portletPreferences = fetchByPrimaryKey(primaryKey);
-
-		if (portletPreferences == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchPortletPreferencesException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return portletPreferences;
-	}
-
-	/**
 	 * Returns the portlet preferences with the primary key or throws a <code>NoSuchPortletPreferencesException</code> if it could not be found.
 	 *
 	 * @param portletPreferencesId the primary key of the portlet preferences
@@ -2108,53 +1996,9 @@ public class PortletPreferencesPersistenceImpl
 		return findByPrimaryKey((Serializable)portletPreferencesId);
 	}
 
-	/**
-	 * Returns the portlet preferences with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the portlet preferences
-	 * @return the portlet preferences, or <code>null</code> if a portlet preferences with the primary key could not be found
-	 */
 	@Override
-	public PortletPreferences fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				PortletPreferences.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		PortletPreferences portletPreferences =
-			(PortletPreferences)EntityCacheUtil.getResult(
-				PortletPreferencesImpl.class, primaryKey);
-
-		if (portletPreferences != null) {
-			return portletPreferences;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			portletPreferences = (PortletPreferences)session.get(
-				PortletPreferencesImpl.class, primaryKey);
-
-			if (portletPreferences != null) {
-				cacheResult(portletPreferences);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return portletPreferences;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -2166,136 +2010,6 @@ public class PortletPreferencesPersistenceImpl
 	@Override
 	public PortletPreferences fetchByPrimaryKey(long portletPreferencesId) {
 		return fetchByPrimaryKey((Serializable)portletPreferencesId);
-	}
-
-	@Override
-	public Map<Serializable, PortletPreferences> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(
-				PortletPreferences.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, PortletPreferences> map =
-			new HashMap<Serializable, PortletPreferences>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			PortletPreferences portletPreferences = fetchByPrimaryKey(
-				primaryKey);
-
-			if (portletPreferences != null) {
-				map.put(primaryKey, portletPreferences);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						PortletPreferences.class, primaryKey)) {
-
-				PortletPreferences portletPreferences =
-					(PortletPreferences)EntityCacheUtil.getResult(
-						PortletPreferencesImpl.class, primaryKey);
-
-				if (portletPreferences == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, portletPreferences);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (PortletPreferences portletPreferences :
-					(List<PortletPreferences>)query.list()) {
-
-				map.put(
-					portletPreferences.getPrimaryKeyObj(), portletPreferences);
-
-				cacheResult(portletPreferences);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2955,9 +2669,6 @@ public class PortletPreferencesPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "portletPreferences.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No PortletPreferences exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No PortletPreferences exists with the key {";
 
@@ -2970,4 +2681,4 @@ public class PortletPreferencesPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-166321047
+// LIFERAY-SERVICE-BUILDER-HASH:1810721954

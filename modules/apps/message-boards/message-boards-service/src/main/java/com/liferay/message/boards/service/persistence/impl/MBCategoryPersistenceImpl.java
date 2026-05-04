@@ -66,7 +66,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -91,7 +90,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = MBCategoryPersistence.class)
 public class MBCategoryPersistenceImpl
-	extends BasePersistenceImpl<MBCategory> implements MBCategoryPersistence {
+	extends BasePersistenceImpl<MBCategory, NoSuchCategoryException>
+	implements MBCategoryPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -7740,48 +7740,6 @@ public class MBCategoryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all message boards categories.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(MBCategoryImpl.class);
-
-		finderCache.clearCache(MBCategoryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the message boards category.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(MBCategory mbCategory) {
-		entityCache.removeResult(MBCategoryImpl.class, mbCategory);
-	}
-
-	@Override
-	public void clearCache(List<MBCategory> mbCategories) {
-		for (MBCategory mbCategory : mbCategories) {
-			entityCache.removeResult(MBCategoryImpl.class, mbCategory);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(MBCategoryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(MBCategoryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		MBCategoryModelImpl mbCategoryModelImpl) {
 
@@ -7846,47 +7804,6 @@ public class MBCategoryPersistenceImpl
 	@Override
 	public MBCategory remove(long categoryId) throws NoSuchCategoryException {
 		return remove((Serializable)categoryId);
-	}
-
-	/**
-	 * Removes the message boards category with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the message boards category
-	 * @return the message boards category that was removed
-	 * @throws NoSuchCategoryException if a message boards category with the primary key could not be found
-	 */
-	@Override
-	public MBCategory remove(Serializable primaryKey)
-		throws NoSuchCategoryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			MBCategory mbCategory = (MBCategory)session.get(
-				MBCategoryImpl.class, primaryKey);
-
-			if (mbCategory == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCategoryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(mbCategory);
-		}
-		catch (NoSuchCategoryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -8074,31 +7991,6 @@ public class MBCategoryPersistenceImpl
 	}
 
 	/**
-	 * Returns the message boards category with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the message boards category
-	 * @return the message boards category
-	 * @throws NoSuchCategoryException if a message boards category with the primary key could not be found
-	 */
-	@Override
-	public MBCategory findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCategoryException {
-
-		MBCategory mbCategory = fetchByPrimaryKey(primaryKey);
-
-		if (mbCategory == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCategoryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return mbCategory;
-	}
-
-	/**
 	 * Returns the message boards category with the primary key or throws a <code>NoSuchCategoryException</code> if it could not be found.
 	 *
 	 * @param categoryId the primary key of the message boards category
@@ -8112,52 +8004,9 @@ public class MBCategoryPersistenceImpl
 		return findByPrimaryKey((Serializable)categoryId);
 	}
 
-	/**
-	 * Returns the message boards category with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the message boards category
-	 * @return the message boards category, or <code>null</code> if a message boards category with the primary key could not be found
-	 */
 	@Override
-	public MBCategory fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				MBCategory.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		MBCategory mbCategory = (MBCategory)entityCache.getResult(
-			MBCategoryImpl.class, primaryKey);
-
-		if (mbCategory != null) {
-			return mbCategory;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			mbCategory = (MBCategory)session.get(
-				MBCategoryImpl.class, primaryKey);
-
-			if (mbCategory != null) {
-				cacheResult(mbCategory);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return mbCategory;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -8169,129 +8018,6 @@ public class MBCategoryPersistenceImpl
 	@Override
 	public MBCategory fetchByPrimaryKey(long categoryId) {
 		return fetchByPrimaryKey((Serializable)categoryId);
-	}
-
-	@Override
-	public Map<Serializable, MBCategory> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(MBCategory.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, MBCategory> map =
-			new HashMap<Serializable, MBCategory>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			MBCategory mbCategory = fetchByPrimaryKey(primaryKey);
-
-			if (mbCategory != null) {
-				map.put(primaryKey, mbCategory);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						MBCategory.class, primaryKey)) {
-
-				MBCategory mbCategory = (MBCategory)entityCache.getResult(
-					MBCategoryImpl.class, primaryKey);
-
-				if (mbCategory == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, mbCategory);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (MBCategory mbCategory : (List<MBCategory>)query.list()) {
-				map.put(mbCategory.getPrimaryKeyObj(), mbCategory);
-
-				cacheResult(mbCategory);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -9023,9 +8749,6 @@ public class MBCategoryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "MBCategory.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No MBCategory exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No MBCategory exists with the key {";
 
@@ -9041,4 +8764,4 @@ public class MBCategoryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1803279651
+// LIFERAY-SERVICE-BUILDER-HASH:-654677442

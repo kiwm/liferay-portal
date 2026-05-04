@@ -46,9 +46,7 @@ import java.lang.reflect.InvocationHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,7 +70,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = DDMStructureLinkPersistence.class)
 public class DDMStructureLinkPersistenceImpl
-	extends BasePersistenceImpl<DDMStructureLink>
+	extends BasePersistenceImpl<DDMStructureLink, NoSuchStructureLinkException>
 	implements DDMStructureLinkPersistence {
 
 	/*
@@ -595,49 +593,6 @@ public class DDMStructureLinkPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all ddm structure links.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(DDMStructureLinkImpl.class);
-
-		finderCache.clearCache(DDMStructureLinkImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the ddm structure link.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DDMStructureLink ddmStructureLink) {
-		entityCache.removeResult(DDMStructureLinkImpl.class, ddmStructureLink);
-	}
-
-	@Override
-	public void clearCache(List<DDMStructureLink> ddmStructureLinks) {
-		for (DDMStructureLink ddmStructureLink : ddmStructureLinks) {
-			entityCache.removeResult(
-				DDMStructureLinkImpl.class, ddmStructureLink);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(DDMStructureLinkImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(DDMStructureLinkImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DDMStructureLinkModelImpl ddmStructureLinkModelImpl) {
 
@@ -686,47 +641,6 @@ public class DDMStructureLinkPersistenceImpl
 		throws NoSuchStructureLinkException {
 
 		return remove((Serializable)structureLinkId);
-	}
-
-	/**
-	 * Removes the ddm structure link with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the ddm structure link
-	 * @return the ddm structure link that was removed
-	 * @throws NoSuchStructureLinkException if a ddm structure link with the primary key could not be found
-	 */
-	@Override
-	public DDMStructureLink remove(Serializable primaryKey)
-		throws NoSuchStructureLinkException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DDMStructureLink ddmStructureLink = (DDMStructureLink)session.get(
-				DDMStructureLinkImpl.class, primaryKey);
-
-			if (ddmStructureLink == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchStructureLinkException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(ddmStructureLink);
-		}
-		catch (NoSuchStructureLinkException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -827,31 +741,6 @@ public class DDMStructureLinkPersistenceImpl
 	}
 
 	/**
-	 * Returns the ddm structure link with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm structure link
-	 * @return the ddm structure link
-	 * @throws NoSuchStructureLinkException if a ddm structure link with the primary key could not be found
-	 */
-	@Override
-	public DDMStructureLink findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchStructureLinkException {
-
-		DDMStructureLink ddmStructureLink = fetchByPrimaryKey(primaryKey);
-
-		if (ddmStructureLink == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchStructureLinkException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return ddmStructureLink;
-	}
-
-	/**
 	 * Returns the ddm structure link with the primary key or throws a <code>NoSuchStructureLinkException</code> if it could not be found.
 	 *
 	 * @param structureLinkId the primary key of the ddm structure link
@@ -865,53 +754,9 @@ public class DDMStructureLinkPersistenceImpl
 		return findByPrimaryKey((Serializable)structureLinkId);
 	}
 
-	/**
-	 * Returns the ddm structure link with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm structure link
-	 * @return the ddm structure link, or <code>null</code> if a ddm structure link with the primary key could not be found
-	 */
 	@Override
-	public DDMStructureLink fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				DDMStructureLink.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DDMStructureLink ddmStructureLink =
-			(DDMStructureLink)entityCache.getResult(
-				DDMStructureLinkImpl.class, primaryKey);
-
-		if (ddmStructureLink != null) {
-			return ddmStructureLink;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ddmStructureLink = (DDMStructureLink)session.get(
-				DDMStructureLinkImpl.class, primaryKey);
-
-			if (ddmStructureLink != null) {
-				cacheResult(ddmStructureLink);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return ddmStructureLink;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -923,132 +768,6 @@ public class DDMStructureLinkPersistenceImpl
 	@Override
 	public DDMStructureLink fetchByPrimaryKey(long structureLinkId) {
 		return fetchByPrimaryKey((Serializable)structureLinkId);
-	}
-
-	@Override
-	public Map<Serializable, DDMStructureLink> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(DDMStructureLink.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DDMStructureLink> map =
-			new HashMap<Serializable, DDMStructureLink>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DDMStructureLink ddmStructureLink = fetchByPrimaryKey(primaryKey);
-
-			if (ddmStructureLink != null) {
-				map.put(primaryKey, ddmStructureLink);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						DDMStructureLink.class, primaryKey)) {
-
-				DDMStructureLink ddmStructureLink =
-					(DDMStructureLink)entityCache.getResult(
-						DDMStructureLinkImpl.class, primaryKey);
-
-				if (ddmStructureLink == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, ddmStructureLink);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DDMStructureLink ddmStructureLink :
-					(List<DDMStructureLink>)query.list()) {
-
-				map.put(ddmStructureLink.getPrimaryKeyObj(), ddmStructureLink);
-
-				cacheResult(ddmStructureLink);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1479,9 +1198,6 @@ public class DDMStructureLinkPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "ddmStructureLink.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DDMStructureLink exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DDMStructureLink exists with the key {";
 
@@ -1494,4 +1210,4 @@ public class DDMStructureLinkPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:246641580
+// LIFERAY-SERVICE-BUILDER-HASH:1491610755

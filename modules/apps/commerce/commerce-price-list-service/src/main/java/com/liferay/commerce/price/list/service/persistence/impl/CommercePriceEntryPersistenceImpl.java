@@ -63,7 +63,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -88,7 +87,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CommercePriceEntryPersistence.class)
 public class CommercePriceEntryPersistenceImpl
-	extends BasePersistenceImpl<CommercePriceEntry>
+	extends BasePersistenceImpl<CommercePriceEntry, NoSuchPriceEntryException>
 	implements CommercePriceEntryPersistence {
 
 	/*
@@ -1983,50 +1982,6 @@ public class CommercePriceEntryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all commerce price entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CommercePriceEntryImpl.class);
-
-		finderCache.clearCache(CommercePriceEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the commerce price entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(CommercePriceEntry commercePriceEntry) {
-		entityCache.removeResult(
-			CommercePriceEntryImpl.class, commercePriceEntry);
-	}
-
-	@Override
-	public void clearCache(List<CommercePriceEntry> commercePriceEntries) {
-		for (CommercePriceEntry commercePriceEntry : commercePriceEntries) {
-			entityCache.removeResult(
-				CommercePriceEntryImpl.class, commercePriceEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CommercePriceEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(CommercePriceEntryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		CommercePriceEntryModelImpl commercePriceEntryModelImpl) {
 
@@ -2078,48 +2033,6 @@ public class CommercePriceEntryPersistenceImpl
 		throws NoSuchPriceEntryException {
 
 		return remove((Serializable)commercePriceEntryId);
-	}
-
-	/**
-	 * Removes the commerce price entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the commerce price entry
-	 * @return the commerce price entry that was removed
-	 * @throws NoSuchPriceEntryException if a commerce price entry with the primary key could not be found
-	 */
-	@Override
-	public CommercePriceEntry remove(Serializable primaryKey)
-		throws NoSuchPriceEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CommercePriceEntry commercePriceEntry =
-				(CommercePriceEntry)session.get(
-					CommercePriceEntryImpl.class, primaryKey);
-
-			if (commercePriceEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchPriceEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(commercePriceEntry);
-		}
-		catch (NoSuchPriceEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -2322,31 +2235,6 @@ public class CommercePriceEntryPersistenceImpl
 	}
 
 	/**
-	 * Returns the commerce price entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the commerce price entry
-	 * @return the commerce price entry
-	 * @throws NoSuchPriceEntryException if a commerce price entry with the primary key could not be found
-	 */
-	@Override
-	public CommercePriceEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchPriceEntryException {
-
-		CommercePriceEntry commercePriceEntry = fetchByPrimaryKey(primaryKey);
-
-		if (commercePriceEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchPriceEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return commercePriceEntry;
-	}
-
-	/**
 	 * Returns the commerce price entry with the primary key or throws a <code>NoSuchPriceEntryException</code> if it could not be found.
 	 *
 	 * @param commercePriceEntryId the primary key of the commerce price entry
@@ -2360,53 +2248,9 @@ public class CommercePriceEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)commercePriceEntryId);
 	}
 
-	/**
-	 * Returns the commerce price entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the commerce price entry
-	 * @return the commerce price entry, or <code>null</code> if a commerce price entry with the primary key could not be found
-	 */
 	@Override
-	public CommercePriceEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				CommercePriceEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		CommercePriceEntry commercePriceEntry =
-			(CommercePriceEntry)entityCache.getResult(
-				CommercePriceEntryImpl.class, primaryKey);
-
-		if (commercePriceEntry != null) {
-			return commercePriceEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			commercePriceEntry = (CommercePriceEntry)session.get(
-				CommercePriceEntryImpl.class, primaryKey);
-
-			if (commercePriceEntry != null) {
-				cacheResult(commercePriceEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return commercePriceEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -2418,134 +2262,6 @@ public class CommercePriceEntryPersistenceImpl
 	@Override
 	public CommercePriceEntry fetchByPrimaryKey(long commercePriceEntryId) {
 		return fetchByPrimaryKey((Serializable)commercePriceEntryId);
-	}
-
-	@Override
-	public Map<Serializable, CommercePriceEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(CommercePriceEntry.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, CommercePriceEntry> map =
-			new HashMap<Serializable, CommercePriceEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			CommercePriceEntry commercePriceEntry = fetchByPrimaryKey(
-				primaryKey);
-
-			if (commercePriceEntry != null) {
-				map.put(primaryKey, commercePriceEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						CommercePriceEntry.class, primaryKey)) {
-
-				CommercePriceEntry commercePriceEntry =
-					(CommercePriceEntry)entityCache.getResult(
-						CommercePriceEntryImpl.class, primaryKey);
-
-				if (commercePriceEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, commercePriceEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (CommercePriceEntry commercePriceEntry :
-					(List<CommercePriceEntry>)query.list()) {
-
-				map.put(
-					commercePriceEntry.getPrimaryKeyObj(), commercePriceEntry);
-
-				cacheResult(commercePriceEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -3282,9 +2998,6 @@ public class CommercePriceEntryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "commercePriceEntry.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CommercePriceEntry exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CommercePriceEntry exists with the key {";
 
@@ -3300,4 +3013,4 @@ public class CommercePriceEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1812807411
+// LIFERAY-SERVICE-BUILDER-HASH:165364531

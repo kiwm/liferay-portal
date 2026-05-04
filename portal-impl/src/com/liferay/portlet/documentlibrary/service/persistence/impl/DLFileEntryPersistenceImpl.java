@@ -36,6 +36,7 @@ import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
 import com.liferay.portal.kernel.security.permission.InlineSQLHelperUtil;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -65,7 +66,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -82,7 +82,8 @@ import java.util.Set;
  * @generated
  */
 public class DLFileEntryPersistenceImpl
-	extends BasePersistenceImpl<DLFileEntry> implements DLFileEntryPersistence {
+	extends BasePersistenceImpl<DLFileEntry, NoSuchFileEntryException>
+	implements DLFileEntryPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -7135,48 +7136,6 @@ public class DLFileEntryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all document library file entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(DLFileEntryImpl.class);
-
-		FinderCacheUtil.clearCache(DLFileEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the document library file entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DLFileEntry dlFileEntry) {
-		EntityCacheUtil.removeResult(DLFileEntryImpl.class, dlFileEntry);
-	}
-
-	@Override
-	public void clearCache(List<DLFileEntry> dlFileEntries) {
-		for (DLFileEntry dlFileEntry : dlFileEntries) {
-			EntityCacheUtil.removeResult(DLFileEntryImpl.class, dlFileEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(DLFileEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(DLFileEntryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DLFileEntryModelImpl dlFileEntryModelImpl) {
 
@@ -7263,47 +7222,6 @@ public class DLFileEntryPersistenceImpl
 		throws NoSuchFileEntryException {
 
 		return remove((Serializable)fileEntryId);
-	}
-
-	/**
-	 * Removes the document library file entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the document library file entry
-	 * @return the document library file entry that was removed
-	 * @throws NoSuchFileEntryException if a document library file entry with the primary key could not be found
-	 */
-	@Override
-	public DLFileEntry remove(Serializable primaryKey)
-		throws NoSuchFileEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DLFileEntry dlFileEntry = (DLFileEntry)session.get(
-				DLFileEntryImpl.class, primaryKey);
-
-			if (dlFileEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchFileEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(dlFileEntry);
-		}
-		catch (NoSuchFileEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -7492,31 +7410,6 @@ public class DLFileEntryPersistenceImpl
 	}
 
 	/**
-	 * Returns the document library file entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the document library file entry
-	 * @return the document library file entry
-	 * @throws NoSuchFileEntryException if a document library file entry with the primary key could not be found
-	 */
-	@Override
-	public DLFileEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchFileEntryException {
-
-		DLFileEntry dlFileEntry = fetchByPrimaryKey(primaryKey);
-
-		if (dlFileEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchFileEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return dlFileEntry;
-	}
-
-	/**
 	 * Returns the document library file entry with the primary key or throws a <code>NoSuchFileEntryException</code> if it could not be found.
 	 *
 	 * @param fileEntryId the primary key of the document library file entry
@@ -7530,52 +7423,9 @@ public class DLFileEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)fileEntryId);
 	}
 
-	/**
-	 * Returns the document library file entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the document library file entry
-	 * @return the document library file entry, or <code>null</code> if a document library file entry with the primary key could not be found
-	 */
 	@Override
-	public DLFileEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				DLFileEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DLFileEntry dlFileEntry = (DLFileEntry)EntityCacheUtil.getResult(
-			DLFileEntryImpl.class, primaryKey);
-
-		if (dlFileEntry != null) {
-			return dlFileEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			dlFileEntry = (DLFileEntry)session.get(
-				DLFileEntryImpl.class, primaryKey);
-
-			if (dlFileEntry != null) {
-				cacheResult(dlFileEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return dlFileEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -7587,130 +7437,6 @@ public class DLFileEntryPersistenceImpl
 	@Override
 	public DLFileEntry fetchByPrimaryKey(long fileEntryId) {
 		return fetchByPrimaryKey((Serializable)fileEntryId);
-	}
-
-	@Override
-	public Map<Serializable, DLFileEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(DLFileEntry.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DLFileEntry> map =
-			new HashMap<Serializable, DLFileEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DLFileEntry dlFileEntry = fetchByPrimaryKey(primaryKey);
-
-			if (dlFileEntry != null) {
-				map.put(primaryKey, dlFileEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						DLFileEntry.class, primaryKey)) {
-
-				DLFileEntry dlFileEntry =
-					(DLFileEntry)EntityCacheUtil.getResult(
-						DLFileEntryImpl.class, primaryKey);
-
-				if (dlFileEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, dlFileEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DLFileEntry dlFileEntry : (List<DLFileEntry>)query.list()) {
-				map.put(dlFileEntry.getPrimaryKeyObj(), dlFileEntry);
-
-				cacheResult(dlFileEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -8772,9 +8498,6 @@ public class DLFileEntryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "DLFileEntry.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DLFileEntry exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DLFileEntry exists with the key {";
 
@@ -8790,4 +8513,4 @@ public class DLFileEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1330430855
+// LIFERAY-SERVICE-BUILDER-HASH:-886158742

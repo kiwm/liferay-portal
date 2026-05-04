@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CalendarNotificationTemplatePersistence.class)
 public class CalendarNotificationTemplatePersistenceImpl
-	extends BasePersistenceImpl<CalendarNotificationTemplate>
+	extends BasePersistenceImpl
+		<CalendarNotificationTemplate, NoSuchNotificationTemplateException>
 	implements CalendarNotificationTemplatePersistence {
 
 	/*
@@ -899,59 +899,6 @@ public class CalendarNotificationTemplatePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all calendar notification templates.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CalendarNotificationTemplateImpl.class);
-
-		finderCache.clearCache(CalendarNotificationTemplateImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the calendar notification template.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(
-		CalendarNotificationTemplate calendarNotificationTemplate) {
-
-		entityCache.removeResult(
-			CalendarNotificationTemplateImpl.class,
-			calendarNotificationTemplate);
-	}
-
-	@Override
-	public void clearCache(
-		List<CalendarNotificationTemplate> calendarNotificationTemplates) {
-
-		for (CalendarNotificationTemplate calendarNotificationTemplate :
-				calendarNotificationTemplates) {
-
-			entityCache.removeResult(
-				CalendarNotificationTemplateImpl.class,
-				calendarNotificationTemplate);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CalendarNotificationTemplateImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				CalendarNotificationTemplateImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		CalendarNotificationTemplateModelImpl
 			calendarNotificationTemplateModelImpl) {
@@ -1023,48 +970,6 @@ public class CalendarNotificationTemplatePersistenceImpl
 		throws NoSuchNotificationTemplateException {
 
 		return remove((Serializable)calendarNotificationTemplateId);
-	}
-
-	/**
-	 * Removes the calendar notification template with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the calendar notification template
-	 * @return the calendar notification template that was removed
-	 * @throws NoSuchNotificationTemplateException if a calendar notification template with the primary key could not be found
-	 */
-	@Override
-	public CalendarNotificationTemplate remove(Serializable primaryKey)
-		throws NoSuchNotificationTemplateException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CalendarNotificationTemplate calendarNotificationTemplate =
-				(CalendarNotificationTemplate)session.get(
-					CalendarNotificationTemplateImpl.class, primaryKey);
-
-			if (calendarNotificationTemplate == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchNotificationTemplateException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(calendarNotificationTemplate);
-		}
-		catch (NoSuchNotificationTemplateException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1209,33 +1114,6 @@ public class CalendarNotificationTemplatePersistenceImpl
 	}
 
 	/**
-	 * Returns the calendar notification template with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the calendar notification template
-	 * @return the calendar notification template
-	 * @throws NoSuchNotificationTemplateException if a calendar notification template with the primary key could not be found
-	 */
-	@Override
-	public CalendarNotificationTemplate findByPrimaryKey(
-			Serializable primaryKey)
-		throws NoSuchNotificationTemplateException {
-
-		CalendarNotificationTemplate calendarNotificationTemplate =
-			fetchByPrimaryKey(primaryKey);
-
-		if (calendarNotificationTemplate == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchNotificationTemplateException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return calendarNotificationTemplate;
-	}
-
-	/**
 	 * Returns the calendar notification template with the primary key or throws a <code>NoSuchNotificationTemplateException</code> if it could not be found.
 	 *
 	 * @param calendarNotificationTemplateId the primary key of the calendar notification template
@@ -1250,56 +1128,9 @@ public class CalendarNotificationTemplatePersistenceImpl
 		return findByPrimaryKey((Serializable)calendarNotificationTemplateId);
 	}
 
-	/**
-	 * Returns the calendar notification template with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the calendar notification template
-	 * @return the calendar notification template, or <code>null</code> if a calendar notification template with the primary key could not be found
-	 */
 	@Override
-	public CalendarNotificationTemplate fetchByPrimaryKey(
-		Serializable primaryKey) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				CalendarNotificationTemplate.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		CalendarNotificationTemplate calendarNotificationTemplate =
-			(CalendarNotificationTemplate)entityCache.getResult(
-				CalendarNotificationTemplateImpl.class, primaryKey);
-
-		if (calendarNotificationTemplate != null) {
-			return calendarNotificationTemplate;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			calendarNotificationTemplate =
-				(CalendarNotificationTemplate)session.get(
-					CalendarNotificationTemplateImpl.class, primaryKey);
-
-			if (calendarNotificationTemplate != null) {
-				cacheResult(calendarNotificationTemplate);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return calendarNotificationTemplate;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1313,137 +1144,6 @@ public class CalendarNotificationTemplatePersistenceImpl
 		long calendarNotificationTemplateId) {
 
 		return fetchByPrimaryKey((Serializable)calendarNotificationTemplateId);
-	}
-
-	@Override
-	public Map<Serializable, CalendarNotificationTemplate> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				CalendarNotificationTemplate.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, CalendarNotificationTemplate> map =
-			new HashMap<Serializable, CalendarNotificationTemplate>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			CalendarNotificationTemplate calendarNotificationTemplate =
-				fetchByPrimaryKey(primaryKey);
-
-			if (calendarNotificationTemplate != null) {
-				map.put(primaryKey, calendarNotificationTemplate);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						CalendarNotificationTemplate.class, primaryKey)) {
-
-				CalendarNotificationTemplate calendarNotificationTemplate =
-					(CalendarNotificationTemplate)entityCache.getResult(
-						CalendarNotificationTemplateImpl.class, primaryKey);
-
-				if (calendarNotificationTemplate == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, calendarNotificationTemplate);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (CalendarNotificationTemplate calendarNotificationTemplate :
-					(List<CalendarNotificationTemplate>)query.list()) {
-
-				map.put(
-					calendarNotificationTemplate.getPrimaryKeyObj(),
-					calendarNotificationTemplate);
-
-				cacheResult(calendarNotificationTemplate);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1959,9 +1659,6 @@ public class CalendarNotificationTemplatePersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"calendarNotificationTemplate.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CalendarNotificationTemplate exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CalendarNotificationTemplate exists with the key {";
 
@@ -1977,4 +1674,4 @@ public class CalendarNotificationTemplatePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1282645732
+// LIFERAY-SERVICE-BUILDER-HASH:1774115880

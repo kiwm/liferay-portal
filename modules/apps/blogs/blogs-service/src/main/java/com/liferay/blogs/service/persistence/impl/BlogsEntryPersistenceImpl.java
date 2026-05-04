@@ -68,7 +68,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -93,7 +92,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = BlogsEntryPersistence.class)
 public class BlogsEntryPersistenceImpl
-	extends BasePersistenceImpl<BlogsEntry> implements BlogsEntryPersistence {
+	extends BasePersistenceImpl<BlogsEntry, NoSuchEntryException>
+	implements BlogsEntryPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -8699,48 +8699,6 @@ public class BlogsEntryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all blogs entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(BlogsEntryImpl.class);
-
-		finderCache.clearCache(BlogsEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the blogs entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(BlogsEntry blogsEntry) {
-		entityCache.removeResult(BlogsEntryImpl.class, blogsEntry);
-	}
-
-	@Override
-	public void clearCache(List<BlogsEntry> blogsEntries) {
-		for (BlogsEntry blogsEntry : blogsEntries) {
-			entityCache.removeResult(BlogsEntryImpl.class, blogsEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(BlogsEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(BlogsEntryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		BlogsEntryModelImpl blogsEntryModelImpl) {
 
@@ -8805,47 +8763,6 @@ public class BlogsEntryPersistenceImpl
 	@Override
 	public BlogsEntry remove(long entryId) throws NoSuchEntryException {
 		return remove((Serializable)entryId);
-	}
-
-	/**
-	 * Removes the blogs entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the blogs entry
-	 * @return the blogs entry that was removed
-	 * @throws NoSuchEntryException if a blogs entry with the primary key could not be found
-	 */
-	@Override
-	public BlogsEntry remove(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			BlogsEntry blogsEntry = (BlogsEntry)session.get(
-				BlogsEntryImpl.class, primaryKey);
-
-			if (blogsEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(blogsEntry);
-		}
-		catch (NoSuchEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -9069,31 +8986,6 @@ public class BlogsEntryPersistenceImpl
 	}
 
 	/**
-	 * Returns the blogs entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the blogs entry
-	 * @return the blogs entry
-	 * @throws NoSuchEntryException if a blogs entry with the primary key could not be found
-	 */
-	@Override
-	public BlogsEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		BlogsEntry blogsEntry = fetchByPrimaryKey(primaryKey);
-
-		if (blogsEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return blogsEntry;
-	}
-
-	/**
 	 * Returns the blogs entry with the primary key or throws a <code>NoSuchEntryException</code> if it could not be found.
 	 *
 	 * @param entryId the primary key of the blogs entry
@@ -9107,52 +8999,9 @@ public class BlogsEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)entryId);
 	}
 
-	/**
-	 * Returns the blogs entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the blogs entry
-	 * @return the blogs entry, or <code>null</code> if a blogs entry with the primary key could not be found
-	 */
 	@Override
-	public BlogsEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				BlogsEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		BlogsEntry blogsEntry = (BlogsEntry)entityCache.getResult(
-			BlogsEntryImpl.class, primaryKey);
-
-		if (blogsEntry != null) {
-			return blogsEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			blogsEntry = (BlogsEntry)session.get(
-				BlogsEntryImpl.class, primaryKey);
-
-			if (blogsEntry != null) {
-				cacheResult(blogsEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return blogsEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -9164,129 +9013,6 @@ public class BlogsEntryPersistenceImpl
 	@Override
 	public BlogsEntry fetchByPrimaryKey(long entryId) {
 		return fetchByPrimaryKey((Serializable)entryId);
-	}
-
-	@Override
-	public Map<Serializable, BlogsEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(BlogsEntry.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, BlogsEntry> map =
-			new HashMap<Serializable, BlogsEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			BlogsEntry blogsEntry = fetchByPrimaryKey(primaryKey);
-
-			if (blogsEntry != null) {
-				map.put(primaryKey, blogsEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						BlogsEntry.class, primaryKey)) {
-
-				BlogsEntry blogsEntry = (BlogsEntry)entityCache.getResult(
-					BlogsEntryImpl.class, primaryKey);
-
-				if (blogsEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, blogsEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (BlogsEntry blogsEntry : (List<BlogsEntry>)query.list()) {
-				map.put(blogsEntry.getPrimaryKeyObj(), blogsEntry);
-
-				cacheResult(blogsEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -10528,9 +10254,6 @@ public class BlogsEntryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "BlogsEntry.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No BlogsEntry exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No BlogsEntry exists with the key {";
 
@@ -10546,4 +10269,4 @@ public class BlogsEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-464151192
+// LIFERAY-SERVICE-BUILDER-HASH:987699351

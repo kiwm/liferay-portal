@@ -27,6 +27,7 @@ import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -48,9 +49,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -66,7 +65,7 @@ import java.util.Set;
  * @generated
  */
 public class AnnouncementsFlagPersistenceImpl
-	extends BasePersistenceImpl<AnnouncementsFlag>
+	extends BasePersistenceImpl<AnnouncementsFlag, NoSuchFlagException>
 	implements AnnouncementsFlagPersistence {
 
 	/*
@@ -576,51 +575,6 @@ public class AnnouncementsFlagPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all announcements flags.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(AnnouncementsFlagImpl.class);
-
-		FinderCacheUtil.clearCache(AnnouncementsFlagImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the announcements flag.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(AnnouncementsFlag announcementsFlag) {
-		EntityCacheUtil.removeResult(
-			AnnouncementsFlagImpl.class, announcementsFlag);
-	}
-
-	@Override
-	public void clearCache(List<AnnouncementsFlag> announcementsFlags) {
-		for (AnnouncementsFlag announcementsFlag : announcementsFlags) {
-			EntityCacheUtil.removeResult(
-				AnnouncementsFlagImpl.class, announcementsFlag);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(AnnouncementsFlagImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(
-				AnnouncementsFlagImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		AnnouncementsFlagModelImpl announcementsFlagModelImpl) {
 
@@ -667,48 +621,6 @@ public class AnnouncementsFlagPersistenceImpl
 	@Override
 	public AnnouncementsFlag remove(long flagId) throws NoSuchFlagException {
 		return remove((Serializable)flagId);
-	}
-
-	/**
-	 * Removes the announcements flag with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the announcements flag
-	 * @return the announcements flag that was removed
-	 * @throws NoSuchFlagException if a announcements flag with the primary key could not be found
-	 */
-	@Override
-	public AnnouncementsFlag remove(Serializable primaryKey)
-		throws NoSuchFlagException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			AnnouncementsFlag announcementsFlag =
-				(AnnouncementsFlag)session.get(
-					AnnouncementsFlagImpl.class, primaryKey);
-
-			if (announcementsFlag == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchFlagException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(announcementsFlag);
-		}
-		catch (NoSuchFlagException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -827,31 +739,6 @@ public class AnnouncementsFlagPersistenceImpl
 	}
 
 	/**
-	 * Returns the announcements flag with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the announcements flag
-	 * @return the announcements flag
-	 * @throws NoSuchFlagException if a announcements flag with the primary key could not be found
-	 */
-	@Override
-	public AnnouncementsFlag findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchFlagException {
-
-		AnnouncementsFlag announcementsFlag = fetchByPrimaryKey(primaryKey);
-
-		if (announcementsFlag == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchFlagException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return announcementsFlag;
-	}
-
-	/**
 	 * Returns the announcements flag with the primary key or throws a <code>NoSuchFlagException</code> if it could not be found.
 	 *
 	 * @param flagId the primary key of the announcements flag
@@ -865,53 +752,9 @@ public class AnnouncementsFlagPersistenceImpl
 		return findByPrimaryKey((Serializable)flagId);
 	}
 
-	/**
-	 * Returns the announcements flag with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the announcements flag
-	 * @return the announcements flag, or <code>null</code> if a announcements flag with the primary key could not be found
-	 */
 	@Override
-	public AnnouncementsFlag fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				AnnouncementsFlag.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		AnnouncementsFlag announcementsFlag =
-			(AnnouncementsFlag)EntityCacheUtil.getResult(
-				AnnouncementsFlagImpl.class, primaryKey);
-
-		if (announcementsFlag != null) {
-			return announcementsFlag;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			announcementsFlag = (AnnouncementsFlag)session.get(
-				AnnouncementsFlagImpl.class, primaryKey);
-
-			if (announcementsFlag != null) {
-				cacheResult(announcementsFlag);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return announcementsFlag;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -923,133 +766,6 @@ public class AnnouncementsFlagPersistenceImpl
 	@Override
 	public AnnouncementsFlag fetchByPrimaryKey(long flagId) {
 		return fetchByPrimaryKey((Serializable)flagId);
-	}
-
-	@Override
-	public Map<Serializable, AnnouncementsFlag> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(AnnouncementsFlag.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, AnnouncementsFlag> map =
-			new HashMap<Serializable, AnnouncementsFlag>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			AnnouncementsFlag announcementsFlag = fetchByPrimaryKey(primaryKey);
-
-			if (announcementsFlag != null) {
-				map.put(primaryKey, announcementsFlag);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						AnnouncementsFlag.class, primaryKey)) {
-
-				AnnouncementsFlag announcementsFlag =
-					(AnnouncementsFlag)EntityCacheUtil.getResult(
-						AnnouncementsFlagImpl.class, primaryKey);
-
-				if (announcementsFlag == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, announcementsFlag);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (AnnouncementsFlag announcementsFlag :
-					(List<AnnouncementsFlag>)query.list()) {
-
-				map.put(
-					announcementsFlag.getPrimaryKeyObj(), announcementsFlag);
-
-				cacheResult(announcementsFlag);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1440,9 +1156,6 @@ public class AnnouncementsFlagPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "announcementsFlag.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No AnnouncementsFlag exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No AnnouncementsFlag exists with the key {";
 
@@ -1455,4 +1168,4 @@ public class AnnouncementsFlagPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-67516279
+// LIFERAY-SERVICE-BUILDER-HASH:-1156787921

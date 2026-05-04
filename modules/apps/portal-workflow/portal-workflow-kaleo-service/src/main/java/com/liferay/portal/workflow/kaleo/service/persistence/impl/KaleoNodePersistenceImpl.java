@@ -51,7 +51,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,7 +74,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = KaleoNodePersistence.class)
 public class KaleoNodePersistenceImpl
-	extends BasePersistenceImpl<KaleoNode> implements KaleoNodePersistence {
+	extends BasePersistenceImpl<KaleoNode, NoSuchNodeException>
+	implements KaleoNodePersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -657,48 +657,6 @@ public class KaleoNodePersistenceImpl
 	}
 
 	/**
-	 * Clears the cache for all kaleo nodes.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(KaleoNodeImpl.class);
-
-		finderCache.clearCache(KaleoNodeImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the kaleo node.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(KaleoNode kaleoNode) {
-		entityCache.removeResult(KaleoNodeImpl.class, kaleoNode);
-	}
-
-	@Override
-	public void clearCache(List<KaleoNode> kaleoNodes) {
-		for (KaleoNode kaleoNode : kaleoNodes) {
-			entityCache.removeResult(KaleoNodeImpl.class, kaleoNode);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(KaleoNodeImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(KaleoNodeImpl.class, primaryKey);
-		}
-	}
-
-	/**
 	 * Creates a new kaleo node with the primary key. Does not add the kaleo node to the database.
 	 *
 	 * @param kaleoNodeId the primary key for the new kaleo node
@@ -726,47 +684,6 @@ public class KaleoNodePersistenceImpl
 	@Override
 	public KaleoNode remove(long kaleoNodeId) throws NoSuchNodeException {
 		return remove((Serializable)kaleoNodeId);
-	}
-
-	/**
-	 * Removes the kaleo node with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the kaleo node
-	 * @return the kaleo node that was removed
-	 * @throws NoSuchNodeException if a kaleo node with the primary key could not be found
-	 */
-	@Override
-	public KaleoNode remove(Serializable primaryKey)
-		throws NoSuchNodeException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			KaleoNode kaleoNode = (KaleoNode)session.get(
-				KaleoNodeImpl.class, primaryKey);
-
-			if (kaleoNode == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchNodeException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(kaleoNode);
-		}
-		catch (NoSuchNodeException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -883,31 +800,6 @@ public class KaleoNodePersistenceImpl
 	}
 
 	/**
-	 * Returns the kaleo node with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kaleo node
-	 * @return the kaleo node
-	 * @throws NoSuchNodeException if a kaleo node with the primary key could not be found
-	 */
-	@Override
-	public KaleoNode findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchNodeException {
-
-		KaleoNode kaleoNode = fetchByPrimaryKey(primaryKey);
-
-		if (kaleoNode == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchNodeException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return kaleoNode;
-	}
-
-	/**
 	 * Returns the kaleo node with the primary key or throws a <code>NoSuchNodeException</code> if it could not be found.
 	 *
 	 * @param kaleoNodeId the primary key of the kaleo node
@@ -921,49 +813,9 @@ public class KaleoNodePersistenceImpl
 		return findByPrimaryKey((Serializable)kaleoNodeId);
 	}
 
-	/**
-	 * Returns the kaleo node with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kaleo node
-	 * @return the kaleo node, or <code>null</code> if a kaleo node with the primary key could not be found
-	 */
 	@Override
-	public KaleoNode fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(KaleoNode.class, primaryKey)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		KaleoNode kaleoNode = (KaleoNode)entityCache.getResult(
-			KaleoNodeImpl.class, primaryKey);
-
-		if (kaleoNode != null) {
-			return kaleoNode;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			kaleoNode = (KaleoNode)session.get(KaleoNodeImpl.class, primaryKey);
-
-			if (kaleoNode != null) {
-				cacheResult(kaleoNode);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return kaleoNode;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -975,129 +827,6 @@ public class KaleoNodePersistenceImpl
 	@Override
 	public KaleoNode fetchByPrimaryKey(long kaleoNodeId) {
 		return fetchByPrimaryKey((Serializable)kaleoNodeId);
-	}
-
-	@Override
-	public Map<Serializable, KaleoNode> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(KaleoNode.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, KaleoNode> map =
-			new HashMap<Serializable, KaleoNode>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			KaleoNode kaleoNode = fetchByPrimaryKey(primaryKey);
-
-			if (kaleoNode != null) {
-				map.put(primaryKey, kaleoNode);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						KaleoNode.class, primaryKey)) {
-
-				KaleoNode kaleoNode = (KaleoNode)entityCache.getResult(
-					KaleoNodeImpl.class, primaryKey);
-
-				if (kaleoNode == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, kaleoNode);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (KaleoNode kaleoNode : (List<KaleoNode>)query.list()) {
-				map.put(kaleoNode.getPrimaryKeyObj(), kaleoNode);
-
-				cacheResult(kaleoNode);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1557,9 +1286,6 @@ public class KaleoNodePersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "kaleoNode.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No KaleoNode exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No KaleoNode exists with the key {";
 
@@ -1575,4 +1301,4 @@ public class KaleoNodePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:813842383
+// LIFERAY-SERVICE-BUILDER-HASH:30654096

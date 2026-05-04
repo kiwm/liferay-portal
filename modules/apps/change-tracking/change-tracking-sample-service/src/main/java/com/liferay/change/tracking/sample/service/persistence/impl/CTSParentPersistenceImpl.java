@@ -45,9 +45,7 @@ import java.lang.reflect.InvocationHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -71,7 +69,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CTSParentPersistence.class)
 public class CTSParentPersistenceImpl
-	extends BasePersistenceImpl<CTSParent> implements CTSParentPersistence {
+	extends BasePersistenceImpl<CTSParent, NoSuchCTSParentException>
+	implements CTSParentPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -471,48 +470,6 @@ public class CTSParentPersistenceImpl
 	}
 
 	/**
-	 * Clears the cache for all cts parents.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CTSParentImpl.class);
-
-		finderCache.clearCache(CTSParentImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the cts parent.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(CTSParent ctsParent) {
-		entityCache.removeResult(CTSParentImpl.class, ctsParent);
-	}
-
-	@Override
-	public void clearCache(List<CTSParent> ctsParents) {
-		for (CTSParent ctsParent : ctsParents) {
-			entityCache.removeResult(CTSParentImpl.class, ctsParent);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CTSParentImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(CTSParentImpl.class, primaryKey);
-		}
-	}
-
-	/**
 	 * Creates a new cts parent with the primary key. Does not add the cts parent to the database.
 	 *
 	 * @param ctsParentId the primary key for the new cts parent
@@ -540,47 +497,6 @@ public class CTSParentPersistenceImpl
 	@Override
 	public CTSParent remove(long ctsParentId) throws NoSuchCTSParentException {
 		return remove((Serializable)ctsParentId);
-	}
-
-	/**
-	 * Removes the cts parent with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the cts parent
-	 * @return the cts parent that was removed
-	 * @throws NoSuchCTSParentException if a cts parent with the primary key could not be found
-	 */
-	@Override
-	public CTSParent remove(Serializable primaryKey)
-		throws NoSuchCTSParentException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CTSParent ctsParent = (CTSParent)session.get(
-				CTSParentImpl.class, primaryKey);
-
-			if (ctsParent == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCTSParentException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(ctsParent);
-		}
-		catch (NoSuchCTSParentException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -674,31 +590,6 @@ public class CTSParentPersistenceImpl
 	}
 
 	/**
-	 * Returns the cts parent with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cts parent
-	 * @return the cts parent
-	 * @throws NoSuchCTSParentException if a cts parent with the primary key could not be found
-	 */
-	@Override
-	public CTSParent findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCTSParentException {
-
-		CTSParent ctsParent = fetchByPrimaryKey(primaryKey);
-
-		if (ctsParent == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCTSParentException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return ctsParent;
-	}
-
-	/**
 	 * Returns the cts parent with the primary key or throws a <code>NoSuchCTSParentException</code> if it could not be found.
 	 *
 	 * @param ctsParentId the primary key of the cts parent
@@ -712,49 +603,9 @@ public class CTSParentPersistenceImpl
 		return findByPrimaryKey((Serializable)ctsParentId);
 	}
 
-	/**
-	 * Returns the cts parent with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cts parent
-	 * @return the cts parent, or <code>null</code> if a cts parent with the primary key could not be found
-	 */
 	@Override
-	public CTSParent fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(CTSParent.class, primaryKey)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		CTSParent ctsParent = (CTSParent)entityCache.getResult(
-			CTSParentImpl.class, primaryKey);
-
-		if (ctsParent != null) {
-			return ctsParent;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ctsParent = (CTSParent)session.get(CTSParentImpl.class, primaryKey);
-
-			if (ctsParent != null) {
-				cacheResult(ctsParent);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return ctsParent;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -766,129 +617,6 @@ public class CTSParentPersistenceImpl
 	@Override
 	public CTSParent fetchByPrimaryKey(long ctsParentId) {
 		return fetchByPrimaryKey((Serializable)ctsParentId);
-	}
-
-	@Override
-	public Map<Serializable, CTSParent> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(CTSParent.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, CTSParent> map =
-			new HashMap<Serializable, CTSParent>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			CTSParent ctsParent = fetchByPrimaryKey(primaryKey);
-
-			if (ctsParent != null) {
-				map.put(primaryKey, ctsParent);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						CTSParent.class, primaryKey)) {
-
-				CTSParent ctsParent = (CTSParent)entityCache.getResult(
-					CTSParentImpl.class, primaryKey);
-
-				if (ctsParent == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, ctsParent);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (CTSParent ctsParent : (List<CTSParent>)query.list()) {
-				map.put(ctsParent.getPrimaryKeyObj(), ctsParent);
-
-				cacheResult(ctsParent);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1290,9 +1018,6 @@ public class CTSParentPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "ctsParent.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CTSParent exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CTSParent exists with the key {";
 
@@ -1305,4 +1030,4 @@ public class CTSParentPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:182235890
+// LIFERAY-SERVICE-BUILDER-HASH:1822655551

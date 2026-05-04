@@ -46,9 +46,7 @@ import java.lang.reflect.InvocationHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,7 +70,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = DDMDataProviderInstanceLinkPersistence.class)
 public class DDMDataProviderInstanceLinkPersistenceImpl
-	extends BasePersistenceImpl<DDMDataProviderInstanceLink>
+	extends BasePersistenceImpl
+		<DDMDataProviderInstanceLink, NoSuchDataProviderInstanceLinkException>
 	implements DDMDataProviderInstanceLinkPersistence {
 
 	/*
@@ -595,58 +594,6 @@ public class DDMDataProviderInstanceLinkPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all ddm data provider instance links.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(DDMDataProviderInstanceLinkImpl.class);
-
-		finderCache.clearCache(DDMDataProviderInstanceLinkImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the ddm data provider instance link.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(
-		DDMDataProviderInstanceLink ddmDataProviderInstanceLink) {
-
-		entityCache.removeResult(
-			DDMDataProviderInstanceLinkImpl.class, ddmDataProviderInstanceLink);
-	}
-
-	@Override
-	public void clearCache(
-		List<DDMDataProviderInstanceLink> ddmDataProviderInstanceLinks) {
-
-		for (DDMDataProviderInstanceLink ddmDataProviderInstanceLink :
-				ddmDataProviderInstanceLinks) {
-
-			entityCache.removeResult(
-				DDMDataProviderInstanceLinkImpl.class,
-				ddmDataProviderInstanceLink);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(DDMDataProviderInstanceLinkImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				DDMDataProviderInstanceLinkImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DDMDataProviderInstanceLinkModelImpl
 			ddmDataProviderInstanceLinkModelImpl) {
@@ -699,48 +646,6 @@ public class DDMDataProviderInstanceLinkPersistenceImpl
 		throws NoSuchDataProviderInstanceLinkException {
 
 		return remove((Serializable)dataProviderInstanceLinkId);
-	}
-
-	/**
-	 * Removes the ddm data provider instance link with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the ddm data provider instance link
-	 * @return the ddm data provider instance link that was removed
-	 * @throws NoSuchDataProviderInstanceLinkException if a ddm data provider instance link with the primary key could not be found
-	 */
-	@Override
-	public DDMDataProviderInstanceLink remove(Serializable primaryKey)
-		throws NoSuchDataProviderInstanceLinkException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DDMDataProviderInstanceLink ddmDataProviderInstanceLink =
-				(DDMDataProviderInstanceLink)session.get(
-					DDMDataProviderInstanceLinkImpl.class, primaryKey);
-
-			if (ddmDataProviderInstanceLink == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchDataProviderInstanceLinkException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(ddmDataProviderInstanceLink);
-		}
-		catch (NoSuchDataProviderInstanceLinkException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -854,32 +759,6 @@ public class DDMDataProviderInstanceLinkPersistenceImpl
 	}
 
 	/**
-	 * Returns the ddm data provider instance link with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm data provider instance link
-	 * @return the ddm data provider instance link
-	 * @throws NoSuchDataProviderInstanceLinkException if a ddm data provider instance link with the primary key could not be found
-	 */
-	@Override
-	public DDMDataProviderInstanceLink findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchDataProviderInstanceLinkException {
-
-		DDMDataProviderInstanceLink ddmDataProviderInstanceLink =
-			fetchByPrimaryKey(primaryKey);
-
-		if (ddmDataProviderInstanceLink == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchDataProviderInstanceLinkException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return ddmDataProviderInstanceLink;
-	}
-
-	/**
 	 * Returns the ddm data provider instance link with the primary key or throws a <code>NoSuchDataProviderInstanceLinkException</code> if it could not be found.
 	 *
 	 * @param dataProviderInstanceLinkId the primary key of the ddm data provider instance link
@@ -894,56 +773,9 @@ public class DDMDataProviderInstanceLinkPersistenceImpl
 		return findByPrimaryKey((Serializable)dataProviderInstanceLinkId);
 	}
 
-	/**
-	 * Returns the ddm data provider instance link with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm data provider instance link
-	 * @return the ddm data provider instance link, or <code>null</code> if a ddm data provider instance link with the primary key could not be found
-	 */
 	@Override
-	public DDMDataProviderInstanceLink fetchByPrimaryKey(
-		Serializable primaryKey) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				DDMDataProviderInstanceLink.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DDMDataProviderInstanceLink ddmDataProviderInstanceLink =
-			(DDMDataProviderInstanceLink)entityCache.getResult(
-				DDMDataProviderInstanceLinkImpl.class, primaryKey);
-
-		if (ddmDataProviderInstanceLink != null) {
-			return ddmDataProviderInstanceLink;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ddmDataProviderInstanceLink =
-				(DDMDataProviderInstanceLink)session.get(
-					DDMDataProviderInstanceLinkImpl.class, primaryKey);
-
-			if (ddmDataProviderInstanceLink != null) {
-				cacheResult(ddmDataProviderInstanceLink);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return ddmDataProviderInstanceLink;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -957,137 +789,6 @@ public class DDMDataProviderInstanceLinkPersistenceImpl
 		long dataProviderInstanceLinkId) {
 
 		return fetchByPrimaryKey((Serializable)dataProviderInstanceLinkId);
-	}
-
-	@Override
-	public Map<Serializable, DDMDataProviderInstanceLink> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				DDMDataProviderInstanceLink.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DDMDataProviderInstanceLink> map =
-			new HashMap<Serializable, DDMDataProviderInstanceLink>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DDMDataProviderInstanceLink ddmDataProviderInstanceLink =
-				fetchByPrimaryKey(primaryKey);
-
-			if (ddmDataProviderInstanceLink != null) {
-				map.put(primaryKey, ddmDataProviderInstanceLink);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						DDMDataProviderInstanceLink.class, primaryKey)) {
-
-				DDMDataProviderInstanceLink ddmDataProviderInstanceLink =
-					(DDMDataProviderInstanceLink)entityCache.getResult(
-						DDMDataProviderInstanceLinkImpl.class, primaryKey);
-
-				if (ddmDataProviderInstanceLink == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, ddmDataProviderInstanceLink);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DDMDataProviderInstanceLink ddmDataProviderInstanceLink :
-					(List<DDMDataProviderInstanceLink>)query.list()) {
-
-				map.put(
-					ddmDataProviderInstanceLink.getPrimaryKeyObj(),
-					ddmDataProviderInstanceLink);
-
-				cacheResult(ddmDataProviderInstanceLink);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1526,9 +1227,6 @@ public class DDMDataProviderInstanceLinkPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"ddmDataProviderInstanceLink.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DDMDataProviderInstanceLink exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DDMDataProviderInstanceLink exists with the key {";
 
@@ -1541,4 +1239,4 @@ public class DDMDataProviderInstanceLinkPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:606286227
+// LIFERAY-SERVICE-BUILDER-HASH:-786071469

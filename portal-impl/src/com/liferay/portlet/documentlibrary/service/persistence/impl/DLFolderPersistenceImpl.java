@@ -38,6 +38,7 @@ import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
 import com.liferay.portal.kernel.security.permission.InlineSQLHelperUtil;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -69,7 +70,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -86,7 +86,8 @@ import java.util.Set;
  * @generated
  */
 public class DLFolderPersistenceImpl
-	extends BasePersistenceImpl<DLFolder> implements DLFolderPersistence {
+	extends BasePersistenceImpl<DLFolder, NoSuchFolderException>
+	implements DLFolderPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -5668,48 +5669,6 @@ public class DLFolderPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all document library folders.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(DLFolderImpl.class);
-
-		FinderCacheUtil.clearCache(DLFolderImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the document library folder.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DLFolder dlFolder) {
-		EntityCacheUtil.removeResult(DLFolderImpl.class, dlFolder);
-	}
-
-	@Override
-	public void clearCache(List<DLFolder> dlFolders) {
-		for (DLFolder dlFolder : dlFolders) {
-			EntityCacheUtil.removeResult(DLFolderImpl.class, dlFolder);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(DLFolderImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(DLFolderImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DLFolderModelImpl dlFolderModelImpl) {
 
@@ -5783,47 +5742,6 @@ public class DLFolderPersistenceImpl
 	@Override
 	public DLFolder remove(long folderId) throws NoSuchFolderException {
 		return remove((Serializable)folderId);
-	}
-
-	/**
-	 * Removes the document library folder with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the document library folder
-	 * @return the document library folder that was removed
-	 * @throws NoSuchFolderException if a document library folder with the primary key could not be found
-	 */
-	@Override
-	public DLFolder remove(Serializable primaryKey)
-		throws NoSuchFolderException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DLFolder dlFolder = (DLFolder)session.get(
-				DLFolderImpl.class, primaryKey);
-
-			if (dlFolder == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchFolderException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(dlFolder);
-		}
-		catch (NoSuchFolderException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -6011,31 +5929,6 @@ public class DLFolderPersistenceImpl
 	}
 
 	/**
-	 * Returns the document library folder with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the document library folder
-	 * @return the document library folder
-	 * @throws NoSuchFolderException if a document library folder with the primary key could not be found
-	 */
-	@Override
-	public DLFolder findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchFolderException {
-
-		DLFolder dlFolder = fetchByPrimaryKey(primaryKey);
-
-		if (dlFolder == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchFolderException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return dlFolder;
-	}
-
-	/**
 	 * Returns the document library folder with the primary key or throws a <code>NoSuchFolderException</code> if it could not be found.
 	 *
 	 * @param folderId the primary key of the document library folder
@@ -6049,51 +5942,9 @@ public class DLFolderPersistenceImpl
 		return findByPrimaryKey((Serializable)folderId);
 	}
 
-	/**
-	 * Returns the document library folder with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the document library folder
-	 * @return the document library folder, or <code>null</code> if a document library folder with the primary key could not be found
-	 */
 	@Override
-	public DLFolder fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				DLFolder.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DLFolder dlFolder = (DLFolder)EntityCacheUtil.getResult(
-			DLFolderImpl.class, primaryKey);
-
-		if (dlFolder != null) {
-			return dlFolder;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			dlFolder = (DLFolder)session.get(DLFolderImpl.class, primaryKey);
-
-			if (dlFolder != null) {
-				cacheResult(dlFolder);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return dlFolder;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -6105,128 +5956,6 @@ public class DLFolderPersistenceImpl
 	@Override
 	public DLFolder fetchByPrimaryKey(long folderId) {
 		return fetchByPrimaryKey((Serializable)folderId);
-	}
-
-	@Override
-	public Map<Serializable, DLFolder> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(DLFolder.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DLFolder> map = new HashMap<Serializable, DLFolder>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DLFolder dlFolder = fetchByPrimaryKey(primaryKey);
-
-			if (dlFolder != null) {
-				map.put(primaryKey, dlFolder);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						DLFolder.class, primaryKey)) {
-
-				DLFolder dlFolder = (DLFolder)EntityCacheUtil.getResult(
-					DLFolderImpl.class, primaryKey);
-
-				if (dlFolder == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, dlFolder);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DLFolder dlFolder : (List<DLFolder>)query.list()) {
-				map.put(dlFolder.getPrimaryKeyObj(), dlFolder);
-
-				cacheResult(dlFolder);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -7644,9 +7373,6 @@ public class DLFolderPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "DLFolder.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DLFolder exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DLFolder exists with the key {";
 
@@ -7662,4 +7388,4 @@ public class DLFolderPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:209435461
+// LIFERAY-SERVICE-BUILDER-HASH:-108651351

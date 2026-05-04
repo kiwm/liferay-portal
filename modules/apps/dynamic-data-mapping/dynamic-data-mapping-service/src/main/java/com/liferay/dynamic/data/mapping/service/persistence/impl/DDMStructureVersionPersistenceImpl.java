@@ -52,7 +52,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -76,7 +75,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = DDMStructureVersionPersistence.class)
 public class DDMStructureVersionPersistenceImpl
-	extends BasePersistenceImpl<DDMStructureVersion>
+	extends BasePersistenceImpl
+		<DDMStructureVersion, NoSuchStructureVersionException>
 	implements DDMStructureVersionPersistence {
 
 	/*
@@ -606,50 +606,6 @@ public class DDMStructureVersionPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all ddm structure versions.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(DDMStructureVersionImpl.class);
-
-		finderCache.clearCache(DDMStructureVersionImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the ddm structure version.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DDMStructureVersion ddmStructureVersion) {
-		entityCache.removeResult(
-			DDMStructureVersionImpl.class, ddmStructureVersion);
-	}
-
-	@Override
-	public void clearCache(List<DDMStructureVersion> ddmStructureVersions) {
-		for (DDMStructureVersion ddmStructureVersion : ddmStructureVersions) {
-			entityCache.removeResult(
-				DDMStructureVersionImpl.class, ddmStructureVersion);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(DDMStructureVersionImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(DDMStructureVersionImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DDMStructureVersionModelImpl ddmStructureVersionModelImpl) {
 
@@ -697,48 +653,6 @@ public class DDMStructureVersionPersistenceImpl
 		throws NoSuchStructureVersionException {
 
 		return remove((Serializable)structureVersionId);
-	}
-
-	/**
-	 * Removes the ddm structure version with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the ddm structure version
-	 * @return the ddm structure version that was removed
-	 * @throws NoSuchStructureVersionException if a ddm structure version with the primary key could not be found
-	 */
-	@Override
-	public DDMStructureVersion remove(Serializable primaryKey)
-		throws NoSuchStructureVersionException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DDMStructureVersion ddmStructureVersion =
-				(DDMStructureVersion)session.get(
-					DDMStructureVersionImpl.class, primaryKey);
-
-			if (ddmStructureVersion == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchStructureVersionException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(ddmStructureVersion);
-		}
-		catch (NoSuchStructureVersionException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -859,31 +773,6 @@ public class DDMStructureVersionPersistenceImpl
 	}
 
 	/**
-	 * Returns the ddm structure version with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm structure version
-	 * @return the ddm structure version
-	 * @throws NoSuchStructureVersionException if a ddm structure version with the primary key could not be found
-	 */
-	@Override
-	public DDMStructureVersion findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchStructureVersionException {
-
-		DDMStructureVersion ddmStructureVersion = fetchByPrimaryKey(primaryKey);
-
-		if (ddmStructureVersion == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchStructureVersionException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return ddmStructureVersion;
-	}
-
-	/**
 	 * Returns the ddm structure version with the primary key or throws a <code>NoSuchStructureVersionException</code> if it could not be found.
 	 *
 	 * @param structureVersionId the primary key of the ddm structure version
@@ -897,53 +786,9 @@ public class DDMStructureVersionPersistenceImpl
 		return findByPrimaryKey((Serializable)structureVersionId);
 	}
 
-	/**
-	 * Returns the ddm structure version with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm structure version
-	 * @return the ddm structure version, or <code>null</code> if a ddm structure version with the primary key could not be found
-	 */
 	@Override
-	public DDMStructureVersion fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				DDMStructureVersion.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DDMStructureVersion ddmStructureVersion =
-			(DDMStructureVersion)entityCache.getResult(
-				DDMStructureVersionImpl.class, primaryKey);
-
-		if (ddmStructureVersion != null) {
-			return ddmStructureVersion;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ddmStructureVersion = (DDMStructureVersion)session.get(
-				DDMStructureVersionImpl.class, primaryKey);
-
-			if (ddmStructureVersion != null) {
-				cacheResult(ddmStructureVersion);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return ddmStructureVersion;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -955,135 +800,6 @@ public class DDMStructureVersionPersistenceImpl
 	@Override
 	public DDMStructureVersion fetchByPrimaryKey(long structureVersionId) {
 		return fetchByPrimaryKey((Serializable)structureVersionId);
-	}
-
-	@Override
-	public Map<Serializable, DDMStructureVersion> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(DDMStructureVersion.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DDMStructureVersion> map =
-			new HashMap<Serializable, DDMStructureVersion>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DDMStructureVersion ddmStructureVersion = fetchByPrimaryKey(
-				primaryKey);
-
-			if (ddmStructureVersion != null) {
-				map.put(primaryKey, ddmStructureVersion);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						DDMStructureVersion.class, primaryKey)) {
-
-				DDMStructureVersion ddmStructureVersion =
-					(DDMStructureVersion)entityCache.getResult(
-						DDMStructureVersionImpl.class, primaryKey);
-
-				if (ddmStructureVersion == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, ddmStructureVersion);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DDMStructureVersion ddmStructureVersion :
-					(List<DDMStructureVersion>)query.list()) {
-
-				map.put(
-					ddmStructureVersion.getPrimaryKeyObj(),
-					ddmStructureVersion);
-
-				cacheResult(ddmStructureVersion);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1529,9 +1245,6 @@ public class DDMStructureVersionPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "ddmStructureVersion.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DDMStructureVersion exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DDMStructureVersion exists with the key {";
 
@@ -1547,4 +1260,4 @@ public class DDMStructureVersionPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-646862396
+// LIFERAY-SERVICE-BUILDER-HASH:-517135641

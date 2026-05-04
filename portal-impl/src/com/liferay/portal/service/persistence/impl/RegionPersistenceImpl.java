@@ -29,6 +29,7 @@ import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.persistence.RegionLocalizationPersistence;
 import com.liferay.portal.kernel.service.persistence.RegionPersistence;
 import com.liferay.portal.kernel.service.persistence.RegionUtil;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -55,7 +56,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -71,7 +71,8 @@ import java.util.Set;
  * @generated
  */
 public class RegionPersistenceImpl
-	extends BasePersistenceImpl<Region> implements RegionPersistence {
+	extends BasePersistenceImpl<Region, NoSuchRegionException>
+	implements RegionPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -1047,48 +1048,6 @@ public class RegionPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all regions.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(RegionImpl.class);
-
-		FinderCacheUtil.clearCache(RegionImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the region.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(Region region) {
-		EntityCacheUtil.removeResult(RegionImpl.class, region);
-	}
-
-	@Override
-	public void clearCache(List<Region> regions) {
-		for (Region region : regions) {
-			EntityCacheUtil.removeResult(RegionImpl.class, region);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(RegionImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(RegionImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(RegionModelImpl regionModelImpl) {
 		try (SafeCloseable safeCloseable =
 				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
@@ -1135,44 +1094,6 @@ public class RegionPersistenceImpl
 	@Override
 	public Region remove(long regionId) throws NoSuchRegionException {
 		return remove((Serializable)regionId);
-	}
-
-	/**
-	 * Removes the region with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the region
-	 * @return the region that was removed
-	 * @throws NoSuchRegionException if a region with the primary key could not be found
-	 */
-	@Override
-	public Region remove(Serializable primaryKey) throws NoSuchRegionException {
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Region region = (Region)session.get(RegionImpl.class, primaryKey);
-
-			if (region == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchRegionException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(region);
-		}
-		catch (NoSuchRegionException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1296,31 +1217,6 @@ public class RegionPersistenceImpl
 	}
 
 	/**
-	 * Returns the region with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the region
-	 * @return the region
-	 * @throws NoSuchRegionException if a region with the primary key could not be found
-	 */
-	@Override
-	public Region findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchRegionException {
-
-		Region region = fetchByPrimaryKey(primaryKey);
-
-		if (region == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchRegionException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return region;
-	}
-
-	/**
 	 * Returns the region with the primary key or throws a <code>NoSuchRegionException</code> if it could not be found.
 	 *
 	 * @param regionId the primary key of the region
@@ -1332,51 +1228,9 @@ public class RegionPersistenceImpl
 		return findByPrimaryKey((Serializable)regionId);
 	}
 
-	/**
-	 * Returns the region with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the region
-	 * @return the region, or <code>null</code> if a region with the primary key could not be found
-	 */
 	@Override
-	public Region fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				Region.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		Region region = (Region)EntityCacheUtil.getResult(
-			RegionImpl.class, primaryKey);
-
-		if (region != null) {
-			return region;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			region = (Region)session.get(RegionImpl.class, primaryKey);
-
-			if (region != null) {
-				cacheResult(region);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return region;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -1388,128 +1242,6 @@ public class RegionPersistenceImpl
 	@Override
 	public Region fetchByPrimaryKey(long regionId) {
 		return fetchByPrimaryKey((Serializable)regionId);
-	}
-
-	@Override
-	public Map<Serializable, Region> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(Region.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, Region> map = new HashMap<Serializable, Region>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			Region region = fetchByPrimaryKey(primaryKey);
-
-			if (region != null) {
-				map.put(primaryKey, region);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						Region.class, primaryKey)) {
-
-				Region region = (Region)EntityCacheUtil.getResult(
-					RegionImpl.class, primaryKey);
-
-				if (region == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, region);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (Region region : (List<Region>)query.list()) {
-				map.put(region.getPrimaryKeyObj(), region);
-
-				cacheResult(region);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2000,9 +1732,6 @@ public class RegionPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "region.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No Region exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No Region exists with the key {";
 
@@ -2018,4 +1747,4 @@ public class RegionPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1508090477
+// LIFERAY-SERVICE-BUILDER-HASH:68699905

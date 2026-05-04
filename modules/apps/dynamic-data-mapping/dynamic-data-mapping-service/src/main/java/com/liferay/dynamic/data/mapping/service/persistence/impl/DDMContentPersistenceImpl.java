@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = DDMContentPersistence.class)
 public class DDMContentPersistenceImpl
-	extends BasePersistenceImpl<DDMContent> implements DDMContentPersistence {
+	extends BasePersistenceImpl<DDMContent, NoSuchContentException>
+	implements DDMContentPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -889,48 +889,6 @@ public class DDMContentPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all ddm contents.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(DDMContentImpl.class);
-
-		finderCache.clearCache(DDMContentImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the ddm content.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DDMContent ddmContent) {
-		entityCache.removeResult(DDMContentImpl.class, ddmContent);
-	}
-
-	@Override
-	public void clearCache(List<DDMContent> ddmContents) {
-		for (DDMContent ddmContent : ddmContents) {
-			entityCache.removeResult(DDMContentImpl.class, ddmContent);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(DDMContentImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(DDMContentImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DDMContentModelImpl ddmContentModelImpl) {
 
@@ -979,47 +937,6 @@ public class DDMContentPersistenceImpl
 	@Override
 	public DDMContent remove(long contentId) throws NoSuchContentException {
 		return remove((Serializable)contentId);
-	}
-
-	/**
-	 * Removes the ddm content with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the ddm content
-	 * @return the ddm content that was removed
-	 * @throws NoSuchContentException if a ddm content with the primary key could not be found
-	 */
-	@Override
-	public DDMContent remove(Serializable primaryKey)
-		throws NoSuchContentException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DDMContent ddmContent = (DDMContent)session.get(
-				DDMContentImpl.class, primaryKey);
-
-			if (ddmContent == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchContentException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(ddmContent);
-		}
-		catch (NoSuchContentException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1146,31 +1063,6 @@ public class DDMContentPersistenceImpl
 	}
 
 	/**
-	 * Returns the ddm content with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm content
-	 * @return the ddm content
-	 * @throws NoSuchContentException if a ddm content with the primary key could not be found
-	 */
-	@Override
-	public DDMContent findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchContentException {
-
-		DDMContent ddmContent = fetchByPrimaryKey(primaryKey);
-
-		if (ddmContent == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchContentException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return ddmContent;
-	}
-
-	/**
 	 * Returns the ddm content with the primary key or throws a <code>NoSuchContentException</code> if it could not be found.
 	 *
 	 * @param contentId the primary key of the ddm content
@@ -1184,52 +1076,9 @@ public class DDMContentPersistenceImpl
 		return findByPrimaryKey((Serializable)contentId);
 	}
 
-	/**
-	 * Returns the ddm content with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm content
-	 * @return the ddm content, or <code>null</code> if a ddm content with the primary key could not be found
-	 */
 	@Override
-	public DDMContent fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				DDMContent.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DDMContent ddmContent = (DDMContent)entityCache.getResult(
-			DDMContentImpl.class, primaryKey);
-
-		if (ddmContent != null) {
-			return ddmContent;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ddmContent = (DDMContent)session.get(
-				DDMContentImpl.class, primaryKey);
-
-			if (ddmContent != null) {
-				cacheResult(ddmContent);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return ddmContent;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1241,129 +1090,6 @@ public class DDMContentPersistenceImpl
 	@Override
 	public DDMContent fetchByPrimaryKey(long contentId) {
 		return fetchByPrimaryKey((Serializable)contentId);
-	}
-
-	@Override
-	public Map<Serializable, DDMContent> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(DDMContent.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DDMContent> map =
-			new HashMap<Serializable, DDMContent>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DDMContent ddmContent = fetchByPrimaryKey(primaryKey);
-
-			if (ddmContent != null) {
-				map.put(primaryKey, ddmContent);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						DDMContent.class, primaryKey)) {
-
-				DDMContent ddmContent = (DDMContent)entityCache.getResult(
-					DDMContentImpl.class, primaryKey);
-
-				if (ddmContent == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, ddmContent);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DDMContent ddmContent : (List<DDMContent>)query.list()) {
-				map.put(ddmContent.getPrimaryKeyObj(), ddmContent);
-
-				cacheResult(ddmContent);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1854,9 +1580,6 @@ public class DDMContentPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "ddmContent.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DDMContent exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DDMContent exists with the key {";
 
@@ -1872,4 +1595,4 @@ public class DDMContentPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-510098289
+// LIFERAY-SERVICE-BUILDER-HASH:-1669945582

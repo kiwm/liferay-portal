@@ -57,7 +57,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -81,7 +80,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = JournalFeedPersistence.class)
 public class JournalFeedPersistenceImpl
-	extends BasePersistenceImpl<JournalFeed> implements JournalFeedPersistence {
+	extends BasePersistenceImpl<JournalFeed, NoSuchFeedException>
+	implements JournalFeedPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -1037,48 +1037,6 @@ public class JournalFeedPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all journal feeds.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(JournalFeedImpl.class);
-
-		finderCache.clearCache(JournalFeedImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the journal feed.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(JournalFeed journalFeed) {
-		entityCache.removeResult(JournalFeedImpl.class, journalFeed);
-	}
-
-	@Override
-	public void clearCache(List<JournalFeed> journalFeeds) {
-		for (JournalFeed journalFeed : journalFeeds) {
-			entityCache.removeResult(JournalFeedImpl.class, journalFeed);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(JournalFeedImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(JournalFeedImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		JournalFeedModelImpl journalFeedModelImpl) {
 
@@ -1136,47 +1094,6 @@ public class JournalFeedPersistenceImpl
 	@Override
 	public JournalFeed remove(long id) throws NoSuchFeedException {
 		return remove((Serializable)id);
-	}
-
-	/**
-	 * Removes the journal feed with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the journal feed
-	 * @return the journal feed that was removed
-	 * @throws NoSuchFeedException if a journal feed with the primary key could not be found
-	 */
-	@Override
-	public JournalFeed remove(Serializable primaryKey)
-		throws NoSuchFeedException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			JournalFeed journalFeed = (JournalFeed)session.get(
-				JournalFeedImpl.class, primaryKey);
-
-			if (journalFeed == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchFeedException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(journalFeed);
-		}
-		catch (NoSuchFeedException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1303,31 +1220,6 @@ public class JournalFeedPersistenceImpl
 	}
 
 	/**
-	 * Returns the journal feed with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the journal feed
-	 * @return the journal feed
-	 * @throws NoSuchFeedException if a journal feed with the primary key could not be found
-	 */
-	@Override
-	public JournalFeed findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchFeedException {
-
-		JournalFeed journalFeed = fetchByPrimaryKey(primaryKey);
-
-		if (journalFeed == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchFeedException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return journalFeed;
-	}
-
-	/**
 	 * Returns the journal feed with the primary key or throws a <code>NoSuchFeedException</code> if it could not be found.
 	 *
 	 * @param id the primary key of the journal feed
@@ -1339,52 +1231,9 @@ public class JournalFeedPersistenceImpl
 		return findByPrimaryKey((Serializable)id);
 	}
 
-	/**
-	 * Returns the journal feed with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the journal feed
-	 * @return the journal feed, or <code>null</code> if a journal feed with the primary key could not be found
-	 */
 	@Override
-	public JournalFeed fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				JournalFeed.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		JournalFeed journalFeed = (JournalFeed)entityCache.getResult(
-			JournalFeedImpl.class, primaryKey);
-
-		if (journalFeed != null) {
-			return journalFeed;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			journalFeed = (JournalFeed)session.get(
-				JournalFeedImpl.class, primaryKey);
-
-			if (journalFeed != null) {
-				cacheResult(journalFeed);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return journalFeed;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1396,129 +1245,6 @@ public class JournalFeedPersistenceImpl
 	@Override
 	public JournalFeed fetchByPrimaryKey(long id) {
 		return fetchByPrimaryKey((Serializable)id);
-	}
-
-	@Override
-	public Map<Serializable, JournalFeed> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(JournalFeed.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, JournalFeed> map =
-			new HashMap<Serializable, JournalFeed>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			JournalFeed journalFeed = fetchByPrimaryKey(primaryKey);
-
-			if (journalFeed != null) {
-				map.put(primaryKey, journalFeed);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						JournalFeed.class, primaryKey)) {
-
-				JournalFeed journalFeed = (JournalFeed)entityCache.getResult(
-					JournalFeedImpl.class, primaryKey);
-
-				if (journalFeed == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, journalFeed);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (JournalFeed journalFeed : (List<JournalFeed>)query.list()) {
-				map.put(journalFeed.getPrimaryKeyObj(), journalFeed);
-
-				cacheResult(journalFeed);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2031,9 +1757,6 @@ public class JournalFeedPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "JournalFeed.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No JournalFeed exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No JournalFeed exists with the key {";
 
@@ -2049,4 +1772,4 @@ public class JournalFeedPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-42493668
+// LIFERAY-SERVICE-BUILDER-HASH:1797451774

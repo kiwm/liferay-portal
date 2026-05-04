@@ -52,9 +52,7 @@ import java.lang.reflect.InvocationHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +76,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CPDefinitionLocalizationPersistence.class)
 public class CPDefinitionLocalizationPersistenceImpl
-	extends BasePersistenceImpl<CPDefinitionLocalization>
+	extends BasePersistenceImpl
+		<CPDefinitionLocalization, NoSuchCPDefinitionLocalizationException>
 	implements CPDefinitionLocalizationPersistence {
 
 	/*
@@ -437,55 +436,6 @@ public class CPDefinitionLocalizationPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all cp definition localizations.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CPDefinitionLocalizationImpl.class);
-
-		finderCache.clearCache(CPDefinitionLocalizationImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the cp definition localization.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(CPDefinitionLocalization cpDefinitionLocalization) {
-		entityCache.removeResult(
-			CPDefinitionLocalizationImpl.class, cpDefinitionLocalization);
-	}
-
-	@Override
-	public void clearCache(
-		List<CPDefinitionLocalization> cpDefinitionLocalizations) {
-
-		for (CPDefinitionLocalization cpDefinitionLocalization :
-				cpDefinitionLocalizations) {
-
-			entityCache.removeResult(
-				CPDefinitionLocalizationImpl.class, cpDefinitionLocalization);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CPDefinitionLocalizationImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				CPDefinitionLocalizationImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		CPDefinitionLocalizationModelImpl cpDefinitionLocalizationModelImpl) {
 
@@ -536,48 +486,6 @@ public class CPDefinitionLocalizationPersistenceImpl
 		throws NoSuchCPDefinitionLocalizationException {
 
 		return remove((Serializable)cpDefinitionLocalizationId);
-	}
-
-	/**
-	 * Removes the cp definition localization with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the cp definition localization
-	 * @return the cp definition localization that was removed
-	 * @throws NoSuchCPDefinitionLocalizationException if a cp definition localization with the primary key could not be found
-	 */
-	@Override
-	public CPDefinitionLocalization remove(Serializable primaryKey)
-		throws NoSuchCPDefinitionLocalizationException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CPDefinitionLocalization cpDefinitionLocalization =
-				(CPDefinitionLocalization)session.get(
-					CPDefinitionLocalizationImpl.class, primaryKey);
-
-			if (cpDefinitionLocalization == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCPDefinitionLocalizationException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(cpDefinitionLocalization);
-		}
-		catch (NoSuchCPDefinitionLocalizationException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -755,32 +663,6 @@ public class CPDefinitionLocalizationPersistenceImpl
 	}
 
 	/**
-	 * Returns the cp definition localization with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cp definition localization
-	 * @return the cp definition localization
-	 * @throws NoSuchCPDefinitionLocalizationException if a cp definition localization with the primary key could not be found
-	 */
-	@Override
-	public CPDefinitionLocalization findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCPDefinitionLocalizationException {
-
-		CPDefinitionLocalization cpDefinitionLocalization = fetchByPrimaryKey(
-			primaryKey);
-
-		if (cpDefinitionLocalization == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCPDefinitionLocalizationException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return cpDefinitionLocalization;
-	}
-
-	/**
 	 * Returns the cp definition localization with the primary key or throws a <code>NoSuchCPDefinitionLocalizationException</code> if it could not be found.
 	 *
 	 * @param cpDefinitionLocalizationId the primary key of the cp definition localization
@@ -795,53 +677,9 @@ public class CPDefinitionLocalizationPersistenceImpl
 		return findByPrimaryKey((Serializable)cpDefinitionLocalizationId);
 	}
 
-	/**
-	 * Returns the cp definition localization with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cp definition localization
-	 * @return the cp definition localization, or <code>null</code> if a cp definition localization with the primary key could not be found
-	 */
 	@Override
-	public CPDefinitionLocalization fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				CPDefinitionLocalization.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		CPDefinitionLocalization cpDefinitionLocalization =
-			(CPDefinitionLocalization)entityCache.getResult(
-				CPDefinitionLocalizationImpl.class, primaryKey);
-
-		if (cpDefinitionLocalization != null) {
-			return cpDefinitionLocalization;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			cpDefinitionLocalization = (CPDefinitionLocalization)session.get(
-				CPDefinitionLocalizationImpl.class, primaryKey);
-
-			if (cpDefinitionLocalization != null) {
-				cacheResult(cpDefinitionLocalization);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return cpDefinitionLocalization;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -855,137 +693,6 @@ public class CPDefinitionLocalizationPersistenceImpl
 		long cpDefinitionLocalizationId) {
 
 		return fetchByPrimaryKey((Serializable)cpDefinitionLocalizationId);
-	}
-
-	@Override
-	public Map<Serializable, CPDefinitionLocalization> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				CPDefinitionLocalization.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, CPDefinitionLocalization> map =
-			new HashMap<Serializable, CPDefinitionLocalization>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			CPDefinitionLocalization cpDefinitionLocalization =
-				fetchByPrimaryKey(primaryKey);
-
-			if (cpDefinitionLocalization != null) {
-				map.put(primaryKey, cpDefinitionLocalization);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						CPDefinitionLocalization.class, primaryKey)) {
-
-				CPDefinitionLocalization cpDefinitionLocalization =
-					(CPDefinitionLocalization)entityCache.getResult(
-						CPDefinitionLocalizationImpl.class, primaryKey);
-
-				if (cpDefinitionLocalization == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, cpDefinitionLocalization);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (CPDefinitionLocalization cpDefinitionLocalization :
-					(List<CPDefinitionLocalization>)query.list()) {
-
-				map.put(
-					cpDefinitionLocalization.getPrimaryKeyObj(),
-					cpDefinitionLocalization);
-
-				cacheResult(cpDefinitionLocalization);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1393,9 +1100,6 @@ public class CPDefinitionLocalizationPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"cpDefinitionLocalization.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CPDefinitionLocalization exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CPDefinitionLocalization exists with the key {";
 
@@ -1408,4 +1112,4 @@ public class CPDefinitionLocalizationPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1568978782
+// LIFERAY-SERVICE-BUILDER-HASH:-833000322

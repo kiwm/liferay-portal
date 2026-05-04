@@ -65,7 +65,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -90,7 +89,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = DDMStructurePersistence.class)
 public class DDMStructurePersistenceImpl
-	extends BasePersistenceImpl<DDMStructure>
+	extends BasePersistenceImpl<DDMStructure, NoSuchStructureException>
 	implements DDMStructurePersistence {
 
 	/*
@@ -5697,48 +5696,6 @@ public class DDMStructurePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all ddm structures.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(DDMStructureImpl.class);
-
-		finderCache.clearCache(DDMStructureImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the ddm structure.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DDMStructure ddmStructure) {
-		entityCache.removeResult(DDMStructureImpl.class, ddmStructure);
-	}
-
-	@Override
-	public void clearCache(List<DDMStructure> ddmStructures) {
-		for (DDMStructure ddmStructure : ddmStructures) {
-			entityCache.removeResult(DDMStructureImpl.class, ddmStructure);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(DDMStructureImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(DDMStructureImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DDMStructureModelImpl ddmStructureModelImpl) {
 
@@ -5808,47 +5765,6 @@ public class DDMStructurePersistenceImpl
 		throws NoSuchStructureException {
 
 		return remove((Serializable)structureId);
-	}
-
-	/**
-	 * Removes the ddm structure with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the ddm structure
-	 * @return the ddm structure that was removed
-	 * @throws NoSuchStructureException if a ddm structure with the primary key could not be found
-	 */
-	@Override
-	public DDMStructure remove(Serializable primaryKey)
-		throws NoSuchStructureException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DDMStructure ddmStructure = (DDMStructure)session.get(
-				DDMStructureImpl.class, primaryKey);
-
-			if (ddmStructure == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchStructureException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(ddmStructure);
-		}
-		catch (NoSuchStructureException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -6015,31 +5931,6 @@ public class DDMStructurePersistenceImpl
 	}
 
 	/**
-	 * Returns the ddm structure with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm structure
-	 * @return the ddm structure
-	 * @throws NoSuchStructureException if a ddm structure with the primary key could not be found
-	 */
-	@Override
-	public DDMStructure findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchStructureException {
-
-		DDMStructure ddmStructure = fetchByPrimaryKey(primaryKey);
-
-		if (ddmStructure == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchStructureException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return ddmStructure;
-	}
-
-	/**
 	 * Returns the ddm structure with the primary key or throws a <code>NoSuchStructureException</code> if it could not be found.
 	 *
 	 * @param structureId the primary key of the ddm structure
@@ -6053,52 +5944,9 @@ public class DDMStructurePersistenceImpl
 		return findByPrimaryKey((Serializable)structureId);
 	}
 
-	/**
-	 * Returns the ddm structure with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm structure
-	 * @return the ddm structure, or <code>null</code> if a ddm structure with the primary key could not be found
-	 */
 	@Override
-	public DDMStructure fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				DDMStructure.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DDMStructure ddmStructure = (DDMStructure)entityCache.getResult(
-			DDMStructureImpl.class, primaryKey);
-
-		if (ddmStructure != null) {
-			return ddmStructure;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ddmStructure = (DDMStructure)session.get(
-				DDMStructureImpl.class, primaryKey);
-
-			if (ddmStructure != null) {
-				cacheResult(ddmStructure);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return ddmStructure;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -6110,129 +5958,6 @@ public class DDMStructurePersistenceImpl
 	@Override
 	public DDMStructure fetchByPrimaryKey(long structureId) {
 		return fetchByPrimaryKey((Serializable)structureId);
-	}
-
-	@Override
-	public Map<Serializable, DDMStructure> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(DDMStructure.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DDMStructure> map =
-			new HashMap<Serializable, DDMStructure>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DDMStructure ddmStructure = fetchByPrimaryKey(primaryKey);
-
-			if (ddmStructure != null) {
-				map.put(primaryKey, ddmStructure);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						DDMStructure.class, primaryKey)) {
-
-				DDMStructure ddmStructure = (DDMStructure)entityCache.getResult(
-					DDMStructureImpl.class, primaryKey);
-
-				if (ddmStructure == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, ddmStructure);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DDMStructure ddmStructure : (List<DDMStructure>)query.list()) {
-				map.put(ddmStructure.getPrimaryKeyObj(), ddmStructure);
-
-				cacheResult(ddmStructure);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -6992,9 +6717,6 @@ public class DDMStructurePersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "DDMStructure.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DDMStructure exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DDMStructure exists with the key {";
 
@@ -7010,4 +6732,4 @@ public class DDMStructurePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:378653516
+// LIFERAY-SERVICE-BUILDER-HASH:59735139

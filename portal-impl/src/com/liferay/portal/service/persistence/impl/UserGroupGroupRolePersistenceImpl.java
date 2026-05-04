@@ -25,6 +25,7 @@ import com.liferay.portal.kernel.model.UserGroupGroupRoleTable;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.persistence.UserGroupGroupRolePersistence;
 import com.liferay.portal.kernel.service.persistence.UserGroupGroupRoleUtil;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -45,9 +46,7 @@ import java.lang.reflect.InvocationHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,7 +62,8 @@ import java.util.Set;
  * @generated
  */
 public class UserGroupGroupRolePersistenceImpl
-	extends BasePersistenceImpl<UserGroupGroupRole>
+	extends BasePersistenceImpl
+		<UserGroupGroupRole, NoSuchUserGroupGroupRoleException>
 	implements UserGroupGroupRolePersistence {
 
 	/*
@@ -1074,51 +1074,6 @@ public class UserGroupGroupRolePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all user group group roles.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(UserGroupGroupRoleImpl.class);
-
-		FinderCacheUtil.clearCache(UserGroupGroupRoleImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the user group group role.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(UserGroupGroupRole userGroupGroupRole) {
-		EntityCacheUtil.removeResult(
-			UserGroupGroupRoleImpl.class, userGroupGroupRole);
-	}
-
-	@Override
-	public void clearCache(List<UserGroupGroupRole> userGroupGroupRoles) {
-		for (UserGroupGroupRole userGroupGroupRole : userGroupGroupRoles) {
-			EntityCacheUtil.removeResult(
-				UserGroupGroupRoleImpl.class, userGroupGroupRole);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(UserGroupGroupRoleImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(
-				UserGroupGroupRoleImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		UserGroupGroupRoleModelImpl userGroupGroupRoleModelImpl) {
 
@@ -1167,48 +1122,6 @@ public class UserGroupGroupRolePersistenceImpl
 		throws NoSuchUserGroupGroupRoleException {
 
 		return remove((Serializable)userGroupGroupRoleId);
-	}
-
-	/**
-	 * Removes the user group group role with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the user group group role
-	 * @return the user group group role that was removed
-	 * @throws NoSuchUserGroupGroupRoleException if a user group group role with the primary key could not be found
-	 */
-	@Override
-	public UserGroupGroupRole remove(Serializable primaryKey)
-		throws NoSuchUserGroupGroupRoleException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			UserGroupGroupRole userGroupGroupRole =
-				(UserGroupGroupRole)session.get(
-					UserGroupGroupRoleImpl.class, primaryKey);
-
-			if (userGroupGroupRole == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchUserGroupGroupRoleException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(userGroupGroupRole);
-		}
-		catch (NoSuchUserGroupGroupRoleException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1314,31 +1227,6 @@ public class UserGroupGroupRolePersistenceImpl
 	}
 
 	/**
-	 * Returns the user group group role with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the user group group role
-	 * @return the user group group role
-	 * @throws NoSuchUserGroupGroupRoleException if a user group group role with the primary key could not be found
-	 */
-	@Override
-	public UserGroupGroupRole findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchUserGroupGroupRoleException {
-
-		UserGroupGroupRole userGroupGroupRole = fetchByPrimaryKey(primaryKey);
-
-		if (userGroupGroupRole == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchUserGroupGroupRoleException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return userGroupGroupRole;
-	}
-
-	/**
 	 * Returns the user group group role with the primary key or throws a <code>NoSuchUserGroupGroupRoleException</code> if it could not be found.
 	 *
 	 * @param userGroupGroupRoleId the primary key of the user group group role
@@ -1352,53 +1240,9 @@ public class UserGroupGroupRolePersistenceImpl
 		return findByPrimaryKey((Serializable)userGroupGroupRoleId);
 	}
 
-	/**
-	 * Returns the user group group role with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the user group group role
-	 * @return the user group group role, or <code>null</code> if a user group group role with the primary key could not be found
-	 */
 	@Override
-	public UserGroupGroupRole fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				UserGroupGroupRole.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		UserGroupGroupRole userGroupGroupRole =
-			(UserGroupGroupRole)EntityCacheUtil.getResult(
-				UserGroupGroupRoleImpl.class, primaryKey);
-
-		if (userGroupGroupRole != null) {
-			return userGroupGroupRole;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			userGroupGroupRole = (UserGroupGroupRole)session.get(
-				UserGroupGroupRoleImpl.class, primaryKey);
-
-			if (userGroupGroupRole != null) {
-				cacheResult(userGroupGroupRole);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return userGroupGroupRole;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -1410,136 +1254,6 @@ public class UserGroupGroupRolePersistenceImpl
 	@Override
 	public UserGroupGroupRole fetchByPrimaryKey(long userGroupGroupRoleId) {
 		return fetchByPrimaryKey((Serializable)userGroupGroupRoleId);
-	}
-
-	@Override
-	public Map<Serializable, UserGroupGroupRole> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(
-				UserGroupGroupRole.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, UserGroupGroupRole> map =
-			new HashMap<Serializable, UserGroupGroupRole>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			UserGroupGroupRole userGroupGroupRole = fetchByPrimaryKey(
-				primaryKey);
-
-			if (userGroupGroupRole != null) {
-				map.put(primaryKey, userGroupGroupRole);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						UserGroupGroupRole.class, primaryKey)) {
-
-				UserGroupGroupRole userGroupGroupRole =
-					(UserGroupGroupRole)EntityCacheUtil.getResult(
-						UserGroupGroupRoleImpl.class, primaryKey);
-
-				if (userGroupGroupRole == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, userGroupGroupRole);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (UserGroupGroupRole userGroupGroupRole :
-					(List<UserGroupGroupRole>)query.list()) {
-
-				map.put(
-					userGroupGroupRole.getPrimaryKeyObj(), userGroupGroupRole);
-
-				cacheResult(userGroupGroupRole);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2026,9 +1740,6 @@ public class UserGroupGroupRolePersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "userGroupGroupRole.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No UserGroupGroupRole exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No UserGroupGroupRole exists with the key {";
 
@@ -2041,4 +1752,4 @@ public class UserGroupGroupRolePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:889524147
+// LIFERAY-SERVICE-BUILDER-HASH:554377178

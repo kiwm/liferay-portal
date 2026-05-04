@@ -46,9 +46,7 @@ import java.lang.reflect.InvocationHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,7 +70,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = JournalContentSearchPersistence.class)
 public class JournalContentSearchPersistenceImpl
-	extends BasePersistenceImpl<JournalContentSearch>
+	extends BasePersistenceImpl
+		<JournalContentSearch, NoSuchContentSearchException>
 	implements JournalContentSearchPersistence {
 
 	/*
@@ -1685,53 +1684,6 @@ public class JournalContentSearchPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all journal content searches.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(JournalContentSearchImpl.class);
-
-		finderCache.clearCache(JournalContentSearchImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the journal content search.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(JournalContentSearch journalContentSearch) {
-		entityCache.removeResult(
-			JournalContentSearchImpl.class, journalContentSearch);
-	}
-
-	@Override
-	public void clearCache(List<JournalContentSearch> journalContentSearchs) {
-		for (JournalContentSearch journalContentSearch :
-				journalContentSearchs) {
-
-			entityCache.removeResult(
-				JournalContentSearchImpl.class, journalContentSearch);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(JournalContentSearchImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				JournalContentSearchImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		JournalContentSearchModelImpl journalContentSearchModelImpl) {
 
@@ -1784,48 +1736,6 @@ public class JournalContentSearchPersistenceImpl
 		throws NoSuchContentSearchException {
 
 		return remove((Serializable)contentSearchId);
-	}
-
-	/**
-	 * Removes the journal content search with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the journal content search
-	 * @return the journal content search that was removed
-	 * @throws NoSuchContentSearchException if a journal content search with the primary key could not be found
-	 */
-	@Override
-	public JournalContentSearch remove(Serializable primaryKey)
-		throws NoSuchContentSearchException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			JournalContentSearch journalContentSearch =
-				(JournalContentSearch)session.get(
-					JournalContentSearchImpl.class, primaryKey);
-
-			if (journalContentSearch == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchContentSearchException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(journalContentSearch);
-		}
-		catch (NoSuchContentSearchException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1931,32 +1841,6 @@ public class JournalContentSearchPersistenceImpl
 	}
 
 	/**
-	 * Returns the journal content search with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the journal content search
-	 * @return the journal content search
-	 * @throws NoSuchContentSearchException if a journal content search with the primary key could not be found
-	 */
-	@Override
-	public JournalContentSearch findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchContentSearchException {
-
-		JournalContentSearch journalContentSearch = fetchByPrimaryKey(
-			primaryKey);
-
-		if (journalContentSearch == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchContentSearchException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return journalContentSearch;
-	}
-
-	/**
 	 * Returns the journal content search with the primary key or throws a <code>NoSuchContentSearchException</code> if it could not be found.
 	 *
 	 * @param contentSearchId the primary key of the journal content search
@@ -1970,53 +1854,9 @@ public class JournalContentSearchPersistenceImpl
 		return findByPrimaryKey((Serializable)contentSearchId);
 	}
 
-	/**
-	 * Returns the journal content search with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the journal content search
-	 * @return the journal content search, or <code>null</code> if a journal content search with the primary key could not be found
-	 */
 	@Override
-	public JournalContentSearch fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				JournalContentSearch.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		JournalContentSearch journalContentSearch =
-			(JournalContentSearch)entityCache.getResult(
-				JournalContentSearchImpl.class, primaryKey);
-
-		if (journalContentSearch != null) {
-			return journalContentSearch;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			journalContentSearch = (JournalContentSearch)session.get(
-				JournalContentSearchImpl.class, primaryKey);
-
-			if (journalContentSearch != null) {
-				cacheResult(journalContentSearch);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return journalContentSearch;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -2028,135 +1868,6 @@ public class JournalContentSearchPersistenceImpl
 	@Override
 	public JournalContentSearch fetchByPrimaryKey(long contentSearchId) {
 		return fetchByPrimaryKey((Serializable)contentSearchId);
-	}
-
-	@Override
-	public Map<Serializable, JournalContentSearch> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(JournalContentSearch.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, JournalContentSearch> map =
-			new HashMap<Serializable, JournalContentSearch>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			JournalContentSearch journalContentSearch = fetchByPrimaryKey(
-				primaryKey);
-
-			if (journalContentSearch != null) {
-				map.put(primaryKey, journalContentSearch);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						JournalContentSearch.class, primaryKey)) {
-
-				JournalContentSearch journalContentSearch =
-					(JournalContentSearch)entityCache.getResult(
-						JournalContentSearchImpl.class, primaryKey);
-
-				if (journalContentSearch == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, journalContentSearch);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (JournalContentSearch journalContentSearch :
-					(List<JournalContentSearch>)query.list()) {
-
-				map.put(
-					journalContentSearch.getPrimaryKeyObj(),
-					journalContentSearch);
-
-				cacheResult(journalContentSearch);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2842,9 +2553,6 @@ public class JournalContentSearchPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"journalContentSearch.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No JournalContentSearch exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No JournalContentSearch exists with the key {";
 
@@ -2857,4 +2565,4 @@ public class JournalContentSearchPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-2105654140
+// LIFERAY-SERVICE-BUILDER-HASH:-348023772

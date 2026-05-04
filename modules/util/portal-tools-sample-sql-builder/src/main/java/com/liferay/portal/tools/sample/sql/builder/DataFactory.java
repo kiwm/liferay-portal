@@ -452,6 +452,7 @@ public class DataFactory {
 				JournalArticle.class.getName());
 		models.add(JournalArticleDisplay.class.getName());
 		models.add(Layout.class.getName());
+		models.add(Layout.class.getName() + "-false");
 		models.add(NavItem.class.getName());
 		models.add(PortletDisplayTemplate.class.getName());
 		models.add(UserPersonalSite.class.getName());
@@ -1194,6 +1195,14 @@ public class DataFactory {
 			dlFolderModel.getModifiedDate(), getClassNameId(DLFolder.class),
 			dlFolderModel.getFolderId(), dlFolderModel.getUuid(), 0, true, true,
 			null, dlFolderModel.getName());
+	}
+
+	public AssetEntryModel newAssetEntryModel(LayoutModel layoutModel) {
+		return newAssetEntryModel(
+			layoutModel.getGroupId(), layoutModel.getCreateDate(),
+			layoutModel.getModifiedDate(), getClassNameId(Layout.class),
+			layoutModel.getPlid(), layoutModel.getUuid(), 0, true, false,
+			"text/html", layoutModel.getTitle());
 	}
 
 	public AssetEntryModel newAssetEntryModel(MBMessageModel mbMessageModel) {
@@ -4582,6 +4591,14 @@ public class DataFactory {
 	}
 
 	public FriendlyURLEntryModel newFriendlyURLEntryModel(
+		long groupId, long classPK) {
+
+		return newFriendlyURLEntryModel(
+			groupId, getClassNameId(Layout.class.getName() + "-false"),
+			classPK);
+	}
+
+	public FriendlyURLEntryModel newFriendlyURLEntryModel(
 		long groupId, long classNameId, long classPK) {
 
 		FriendlyURLEntryModel friendlyURLEntryModel =
@@ -5663,12 +5680,12 @@ public class DataFactory {
 
 			if (layoutModel.getPlid() == fragmentEntryLinkModel.getPlid()) {
 				correspondingFragmentEntryLinkModel = fragmentEntryLinkModel;
-			}
 
-			data = StringUtil.replaceFirst(
-				data, "${fragmentEntryLinkId}",
-				String.valueOf(
-					fragmentEntryLinkModel.getFragmentEntryLinkId()));
+				data = StringUtil.replaceFirst(
+					data, "${fragmentEntryLinkId}",
+					String.valueOf(
+						fragmentEntryLinkModel.getFragmentEntryLinkId()));
+			}
 		}
 
 		layoutPageTemplateStructureRelModel.setSegmentsExperienceId(
@@ -5963,7 +5980,7 @@ public class DataFactory {
 		throws Exception {
 
 		boolean addSubmitFragmentEntryLink = false;
-		List<FragmentEntryLinkModel> nonhiddenFragmentEntryLinkModels =
+		List<FragmentEntryLinkModel> originalFragmentEntryLinkModels =
 			new ArrayList<>();
 		String paragraphRenderNamespace = StringUtil.randomId();
 		long segmentsExperienceId = 0;
@@ -5973,6 +5990,7 @@ public class DataFactory {
 				continue;
 			}
 
+			String configuration = StringPool.BLANK;
 			String css = null;
 			String editValueJSON = null;
 			String html = null;
@@ -6051,21 +6069,23 @@ public class DataFactory {
 						"inputs", fragmentName, "js"));
 
 				type = FragmentConstants.TYPE_INPUT;
+
+				configuration = _getFragmentComponentConfiguration(renderKey);
 			}
 
 			segmentsExperienceId = _getSegmentsExperienceId(
 				layoutModels.get(1), segmentsExperienceModels);
 
-			nonhiddenFragmentEntryLinkModels.add(
+			originalFragmentEntryLinkModels.add(
 				newFragmentEntryLinkModel(
 					layoutModels.get(1), null, segmentsExperienceId,
-					_escape(css), _escape(html), _escape(js), StringPool.BLANK,
+					_escape(css), _escape(html), _escape(js), configuration,
 					editValueJSON, paragraphRenderNamespace, 0, renderKey,
 					type));
 		}
 
 		if (addSubmitFragmentEntryLink) {
-			nonhiddenFragmentEntryLinkModels.add(
+			originalFragmentEntryLinkModels.add(
 				newFragmentEntryLinkModel(
 					layoutModels.get(1), null, segmentsExperienceId,
 					StringPool.BLANK,
@@ -6077,7 +6097,9 @@ public class DataFactory {
 						_readFile(
 							_getFragmentComponentInputStream(
 								"inputs", "submit-button", "js"))),
-					StringPool.BLANK,
+					_readFile(
+						"fragment_component/fragment_component_input_submit_" +
+							"configuration.json"),
 					_readFile(
 						"fragment_component" +
 							"/fragment_component_input_submit_editValue.json"),
@@ -6086,13 +6108,13 @@ public class DataFactory {
 		}
 
 		List<FragmentEntryLinkModel> fragmentEntryLinkModels = new ArrayList<>(
-			nonhiddenFragmentEntryLinkModels);
+			originalFragmentEntryLinkModels);
 
 		segmentsExperienceId = _getSegmentsExperienceId(
 			layoutModels.get(0), segmentsExperienceModels);
 
 		for (FragmentEntryLinkModel originalFragmentEntryLinkModel :
-				nonhiddenFragmentEntryLinkModels) {
+				originalFragmentEntryLinkModels) {
 
 			fragmentEntryLinkModels.add(
 				newFragmentEntryLinkModel(
@@ -9151,6 +9173,30 @@ public class DataFactory {
 		}
 
 		return data;
+	}
+
+	private String _getFragmentComponentConfiguration(String renderKey)
+		throws Exception {
+
+		if (renderKey.equals("INPUTS-file-upload")) {
+			renderKey = "file_upload";
+		}
+
+		if (renderKey.equals("INPUTS-rich-text-input")) {
+			renderKey = "rich_text";
+		}
+
+		if (renderKey.equals("INPUTS-select-from-list")) {
+			return StringPool.BLANK;
+		}
+
+		if (renderKey.equals("INPUTS-text-input")) {
+			renderKey = "text";
+		}
+
+		return _readFile(
+			"fragment_component/fragment_component_input_" + renderKey +
+				"_configuration.json");
 	}
 
 	private InputStream _getFragmentComponentInputStream(

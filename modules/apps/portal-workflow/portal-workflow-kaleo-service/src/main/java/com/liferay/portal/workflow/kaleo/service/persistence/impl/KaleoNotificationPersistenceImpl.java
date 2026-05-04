@@ -48,9 +48,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -74,7 +72,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = KaleoNotificationPersistence.class)
 public class KaleoNotificationPersistenceImpl
-	extends BasePersistenceImpl<KaleoNotification>
+	extends BasePersistenceImpl<KaleoNotification, NoSuchNotificationException>
 	implements KaleoNotificationPersistence {
 
 	/*
@@ -847,50 +845,6 @@ public class KaleoNotificationPersistenceImpl
 	}
 
 	/**
-	 * Clears the cache for all kaleo notifications.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(KaleoNotificationImpl.class);
-
-		finderCache.clearCache(KaleoNotificationImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the kaleo notification.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(KaleoNotification kaleoNotification) {
-		entityCache.removeResult(
-			KaleoNotificationImpl.class, kaleoNotification);
-	}
-
-	@Override
-	public void clearCache(List<KaleoNotification> kaleoNotifications) {
-		for (KaleoNotification kaleoNotification : kaleoNotifications) {
-			entityCache.removeResult(
-				KaleoNotificationImpl.class, kaleoNotification);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(KaleoNotificationImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(KaleoNotificationImpl.class, primaryKey);
-		}
-	}
-
-	/**
 	 * Creates a new kaleo notification with the primary key. Does not add the kaleo notification to the database.
 	 *
 	 * @param kaleoNotificationId the primary key for the new kaleo notification
@@ -920,48 +874,6 @@ public class KaleoNotificationPersistenceImpl
 		throws NoSuchNotificationException {
 
 		return remove((Serializable)kaleoNotificationId);
-	}
-
-	/**
-	 * Removes the kaleo notification with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the kaleo notification
-	 * @return the kaleo notification that was removed
-	 * @throws NoSuchNotificationException if a kaleo notification with the primary key could not be found
-	 */
-	@Override
-	public KaleoNotification remove(Serializable primaryKey)
-		throws NoSuchNotificationException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			KaleoNotification kaleoNotification =
-				(KaleoNotification)session.get(
-					KaleoNotificationImpl.class, primaryKey);
-
-			if (kaleoNotification == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchNotificationException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(kaleoNotification);
-		}
-		catch (NoSuchNotificationException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1088,31 +1000,6 @@ public class KaleoNotificationPersistenceImpl
 	}
 
 	/**
-	 * Returns the kaleo notification with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kaleo notification
-	 * @return the kaleo notification
-	 * @throws NoSuchNotificationException if a kaleo notification with the primary key could not be found
-	 */
-	@Override
-	public KaleoNotification findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchNotificationException {
-
-		KaleoNotification kaleoNotification = fetchByPrimaryKey(primaryKey);
-
-		if (kaleoNotification == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchNotificationException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return kaleoNotification;
-	}
-
-	/**
 	 * Returns the kaleo notification with the primary key or throws a <code>NoSuchNotificationException</code> if it could not be found.
 	 *
 	 * @param kaleoNotificationId the primary key of the kaleo notification
@@ -1126,53 +1013,9 @@ public class KaleoNotificationPersistenceImpl
 		return findByPrimaryKey((Serializable)kaleoNotificationId);
 	}
 
-	/**
-	 * Returns the kaleo notification with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kaleo notification
-	 * @return the kaleo notification, or <code>null</code> if a kaleo notification with the primary key could not be found
-	 */
 	@Override
-	public KaleoNotification fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				KaleoNotification.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		KaleoNotification kaleoNotification =
-			(KaleoNotification)entityCache.getResult(
-				KaleoNotificationImpl.class, primaryKey);
-
-		if (kaleoNotification != null) {
-			return kaleoNotification;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			kaleoNotification = (KaleoNotification)session.get(
-				KaleoNotificationImpl.class, primaryKey);
-
-			if (kaleoNotification != null) {
-				cacheResult(kaleoNotification);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return kaleoNotification;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1184,133 +1027,6 @@ public class KaleoNotificationPersistenceImpl
 	@Override
 	public KaleoNotification fetchByPrimaryKey(long kaleoNotificationId) {
 		return fetchByPrimaryKey((Serializable)kaleoNotificationId);
-	}
-
-	@Override
-	public Map<Serializable, KaleoNotification> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(KaleoNotification.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, KaleoNotification> map =
-			new HashMap<Serializable, KaleoNotification>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			KaleoNotification kaleoNotification = fetchByPrimaryKey(primaryKey);
-
-			if (kaleoNotification != null) {
-				map.put(primaryKey, kaleoNotification);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						KaleoNotification.class, primaryKey)) {
-
-				KaleoNotification kaleoNotification =
-					(KaleoNotification)entityCache.getResult(
-						KaleoNotificationImpl.class, primaryKey);
-
-				if (kaleoNotification == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, kaleoNotification);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (KaleoNotification kaleoNotification :
-					(List<KaleoNotification>)query.list()) {
-
-				map.put(
-					kaleoNotification.getPrimaryKeyObj(), kaleoNotification);
-
-				cacheResult(kaleoNotification);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1827,9 +1543,6 @@ public class KaleoNotificationPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "kaleoNotification.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No KaleoNotification exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No KaleoNotification exists with the key {";
 
@@ -1842,4 +1555,4 @@ public class KaleoNotificationPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1964507204
+// LIFERAY-SERVICE-BUILDER-HASH:-1753290084

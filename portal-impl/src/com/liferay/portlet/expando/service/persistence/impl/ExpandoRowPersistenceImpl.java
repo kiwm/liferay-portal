@@ -27,6 +27,7 @@ import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -51,7 +52,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -67,7 +67,8 @@ import java.util.Set;
  * @generated
  */
 public class ExpandoRowPersistenceImpl
-	extends BasePersistenceImpl<ExpandoRow> implements ExpandoRowPersistence {
+	extends BasePersistenceImpl<ExpandoRow, NoSuchRowException>
+	implements ExpandoRowPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -558,48 +559,6 @@ public class ExpandoRowPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all expando rows.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(ExpandoRowImpl.class);
-
-		FinderCacheUtil.clearCache(ExpandoRowImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the expando row.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(ExpandoRow expandoRow) {
-		EntityCacheUtil.removeResult(ExpandoRowImpl.class, expandoRow);
-	}
-
-	@Override
-	public void clearCache(List<ExpandoRow> expandoRows) {
-		for (ExpandoRow expandoRow : expandoRows) {
-			EntityCacheUtil.removeResult(ExpandoRowImpl.class, expandoRow);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(ExpandoRowImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(ExpandoRowImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		ExpandoRowModelImpl expandoRowModelImpl) {
 
@@ -645,47 +604,6 @@ public class ExpandoRowPersistenceImpl
 	@Override
 	public ExpandoRow remove(long rowId) throws NoSuchRowException {
 		return remove((Serializable)rowId);
-	}
-
-	/**
-	 * Removes the expando row with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the expando row
-	 * @return the expando row that was removed
-	 * @throws NoSuchRowException if a expando row with the primary key could not be found
-	 */
-	@Override
-	public ExpandoRow remove(Serializable primaryKey)
-		throws NoSuchRowException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ExpandoRow expandoRow = (ExpandoRow)session.get(
-				ExpandoRowImpl.class, primaryKey);
-
-			if (expandoRow == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchRowException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(expandoRow);
-		}
-		catch (NoSuchRowException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -797,31 +715,6 @@ public class ExpandoRowPersistenceImpl
 	}
 
 	/**
-	 * Returns the expando row with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the expando row
-	 * @return the expando row
-	 * @throws NoSuchRowException if a expando row with the primary key could not be found
-	 */
-	@Override
-	public ExpandoRow findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchRowException {
-
-		ExpandoRow expandoRow = fetchByPrimaryKey(primaryKey);
-
-		if (expandoRow == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchRowException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return expandoRow;
-	}
-
-	/**
 	 * Returns the expando row with the primary key or throws a <code>NoSuchRowException</code> if it could not be found.
 	 *
 	 * @param rowId the primary key of the expando row
@@ -833,52 +726,9 @@ public class ExpandoRowPersistenceImpl
 		return findByPrimaryKey((Serializable)rowId);
 	}
 
-	/**
-	 * Returns the expando row with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the expando row
-	 * @return the expando row, or <code>null</code> if a expando row with the primary key could not be found
-	 */
 	@Override
-	public ExpandoRow fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				ExpandoRow.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		ExpandoRow expandoRow = (ExpandoRow)EntityCacheUtil.getResult(
-			ExpandoRowImpl.class, primaryKey);
-
-		if (expandoRow != null) {
-			return expandoRow;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			expandoRow = (ExpandoRow)session.get(
-				ExpandoRowImpl.class, primaryKey);
-
-			if (expandoRow != null) {
-				cacheResult(expandoRow);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return expandoRow;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -890,129 +740,6 @@ public class ExpandoRowPersistenceImpl
 	@Override
 	public ExpandoRow fetchByPrimaryKey(long rowId) {
 		return fetchByPrimaryKey((Serializable)rowId);
-	}
-
-	@Override
-	public Map<Serializable, ExpandoRow> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(ExpandoRow.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, ExpandoRow> map =
-			new HashMap<Serializable, ExpandoRow>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			ExpandoRow expandoRow = fetchByPrimaryKey(primaryKey);
-
-			if (expandoRow != null) {
-				map.put(primaryKey, expandoRow);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						ExpandoRow.class, primaryKey)) {
-
-				ExpandoRow expandoRow = (ExpandoRow)EntityCacheUtil.getResult(
-					ExpandoRowImpl.class, primaryKey);
-
-				if (expandoRow == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, expandoRow);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (ExpandoRow expandoRow : (List<ExpandoRow>)query.list()) {
-				map.put(expandoRow.getPrimaryKeyObj(), expandoRow);
-
-				cacheResult(expandoRow);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1398,9 +1125,6 @@ public class ExpandoRowPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "expandoRow.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No ExpandoRow exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No ExpandoRow exists with the key {";
 
@@ -1416,4 +1140,4 @@ public class ExpandoRowPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:490525575
+// LIFERAY-SERVICE-BUILDER-HASH:-131272374

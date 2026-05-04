@@ -21,11 +21,17 @@ interface ExecItemActionArgs {
 		| 'Edit'
 		| 'Expire'
 		| 'Export for Translation'
+		| 'Move To'
 		| 'Share'
 		| 'Show Details'
 		| 'View'
 		| 'View History';
 	filter: string;
+}
+
+interface BulkCopyOrMoveArgs {
+	destinationFolder: string;
+	destinationSpace: string;
 }
 
 export class AssetsPage {
@@ -130,6 +136,60 @@ export class AssetsPage {
 
 	async execBulkItemAction(action: string) {
 		await this.dataSetFragmentPage.execBulkItemAction({action});
+	}
+
+	async bulkCopyTo(args: BulkCopyOrMoveArgs) {
+		await this.page
+			.getByRole('button', {exact: true, name: 'Copy To'})
+			.click();
+
+		await this.selectCopyOrMoveDestination(args);
+	}
+
+	async bulkMoveTo(args: BulkCopyOrMoveArgs) {
+		await this.page
+			.getByRole('button', {exact: true, name: 'Move To'})
+			.click();
+
+		await this.selectCopyOrMoveDestination(args);
+	}
+
+	getCopyOrMoveDestinationDialog() {
+		return this.page.getByRole('dialog', {name: /^(Copy|Move) .+ To$/});
+	}
+
+	async selectCopyOrMoveDestination({
+		destinationFolder,
+		destinationSpace,
+	}: BulkCopyOrMoveArgs) {
+		const dialog = this.getCopyOrMoveDestinationDialog();
+
+		await dialog.waitFor();
+
+		await dialog.getByLabel(destinationSpace).click();
+
+		await dialog
+			.getByRole('radio', {
+				exact: true,
+				name: `Select ${destinationFolder}`,
+			})
+			.click();
+
+		await dialog.getByRole('button', {exact: true, name: 'Select'}).click();
+	}
+
+	async gotoSpaceContents(spaceName: string) {
+		await this.gotoAll();
+
+		await this.page
+			.getByRole('menuitem', {exact: true, name: spaceName})
+			.click();
+
+		await this.page
+			.getByRole('menuitem', {exact: true, name: 'Contents'})
+			.click();
+
+		await this.page.getByRole('heading', {name: 'Contents'}).waitFor();
 	}
 
 	async execItemAction({action, filter}: ExecItemActionArgs) {

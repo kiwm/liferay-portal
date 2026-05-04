@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CPInstanceUnitOfMeasurePersistence.class)
 public class CPInstanceUnitOfMeasurePersistenceImpl
-	extends BasePersistenceImpl<CPInstanceUnitOfMeasure>
+	extends BasePersistenceImpl
+		<CPInstanceUnitOfMeasure, NoSuchCPInstanceUnitOfMeasureException>
 	implements CPInstanceUnitOfMeasurePersistence {
 
 	/*
@@ -1446,55 +1446,6 @@ public class CPInstanceUnitOfMeasurePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all cp instance unit of measures.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CPInstanceUnitOfMeasureImpl.class);
-
-		finderCache.clearCache(CPInstanceUnitOfMeasureImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the cp instance unit of measure.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(CPInstanceUnitOfMeasure cpInstanceUnitOfMeasure) {
-		entityCache.removeResult(
-			CPInstanceUnitOfMeasureImpl.class, cpInstanceUnitOfMeasure);
-	}
-
-	@Override
-	public void clearCache(
-		List<CPInstanceUnitOfMeasure> cpInstanceUnitOfMeasures) {
-
-		for (CPInstanceUnitOfMeasure cpInstanceUnitOfMeasure :
-				cpInstanceUnitOfMeasures) {
-
-			entityCache.removeResult(
-				CPInstanceUnitOfMeasureImpl.class, cpInstanceUnitOfMeasure);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CPInstanceUnitOfMeasureImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				CPInstanceUnitOfMeasureImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		CPInstanceUnitOfMeasureModelImpl cpInstanceUnitOfMeasureModelImpl) {
 
@@ -1547,48 +1498,6 @@ public class CPInstanceUnitOfMeasurePersistenceImpl
 		throws NoSuchCPInstanceUnitOfMeasureException {
 
 		return remove((Serializable)CPInstanceUnitOfMeasureId);
-	}
-
-	/**
-	 * Removes the cp instance unit of measure with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the cp instance unit of measure
-	 * @return the cp instance unit of measure that was removed
-	 * @throws NoSuchCPInstanceUnitOfMeasureException if a cp instance unit of measure with the primary key could not be found
-	 */
-	@Override
-	public CPInstanceUnitOfMeasure remove(Serializable primaryKey)
-		throws NoSuchCPInstanceUnitOfMeasureException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CPInstanceUnitOfMeasure cpInstanceUnitOfMeasure =
-				(CPInstanceUnitOfMeasure)session.get(
-					CPInstanceUnitOfMeasureImpl.class, primaryKey);
-
-			if (cpInstanceUnitOfMeasure == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCPInstanceUnitOfMeasureException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(cpInstanceUnitOfMeasure);
-		}
-		catch (NoSuchCPInstanceUnitOfMeasureException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1728,32 +1637,6 @@ public class CPInstanceUnitOfMeasurePersistenceImpl
 	}
 
 	/**
-	 * Returns the cp instance unit of measure with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cp instance unit of measure
-	 * @return the cp instance unit of measure
-	 * @throws NoSuchCPInstanceUnitOfMeasureException if a cp instance unit of measure with the primary key could not be found
-	 */
-	@Override
-	public CPInstanceUnitOfMeasure findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCPInstanceUnitOfMeasureException {
-
-		CPInstanceUnitOfMeasure cpInstanceUnitOfMeasure = fetchByPrimaryKey(
-			primaryKey);
-
-		if (cpInstanceUnitOfMeasure == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCPInstanceUnitOfMeasureException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return cpInstanceUnitOfMeasure;
-	}
-
-	/**
 	 * Returns the cp instance unit of measure with the primary key or throws a <code>NoSuchCPInstanceUnitOfMeasureException</code> if it could not be found.
 	 *
 	 * @param CPInstanceUnitOfMeasureId the primary key of the cp instance unit of measure
@@ -1768,53 +1651,9 @@ public class CPInstanceUnitOfMeasurePersistenceImpl
 		return findByPrimaryKey((Serializable)CPInstanceUnitOfMeasureId);
 	}
 
-	/**
-	 * Returns the cp instance unit of measure with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cp instance unit of measure
-	 * @return the cp instance unit of measure, or <code>null</code> if a cp instance unit of measure with the primary key could not be found
-	 */
 	@Override
-	public CPInstanceUnitOfMeasure fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				CPInstanceUnitOfMeasure.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		CPInstanceUnitOfMeasure cpInstanceUnitOfMeasure =
-			(CPInstanceUnitOfMeasure)entityCache.getResult(
-				CPInstanceUnitOfMeasureImpl.class, primaryKey);
-
-		if (cpInstanceUnitOfMeasure != null) {
-			return cpInstanceUnitOfMeasure;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			cpInstanceUnitOfMeasure = (CPInstanceUnitOfMeasure)session.get(
-				CPInstanceUnitOfMeasureImpl.class, primaryKey);
-
-			if (cpInstanceUnitOfMeasure != null) {
-				cacheResult(cpInstanceUnitOfMeasure);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return cpInstanceUnitOfMeasure;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1828,137 +1667,6 @@ public class CPInstanceUnitOfMeasurePersistenceImpl
 		long CPInstanceUnitOfMeasureId) {
 
 		return fetchByPrimaryKey((Serializable)CPInstanceUnitOfMeasureId);
-	}
-
-	@Override
-	public Map<Serializable, CPInstanceUnitOfMeasure> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				CPInstanceUnitOfMeasure.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, CPInstanceUnitOfMeasure> map =
-			new HashMap<Serializable, CPInstanceUnitOfMeasure>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			CPInstanceUnitOfMeasure cpInstanceUnitOfMeasure = fetchByPrimaryKey(
-				primaryKey);
-
-			if (cpInstanceUnitOfMeasure != null) {
-				map.put(primaryKey, cpInstanceUnitOfMeasure);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						CPInstanceUnitOfMeasure.class, primaryKey)) {
-
-				CPInstanceUnitOfMeasure cpInstanceUnitOfMeasure =
-					(CPInstanceUnitOfMeasure)entityCache.getResult(
-						CPInstanceUnitOfMeasureImpl.class, primaryKey);
-
-				if (cpInstanceUnitOfMeasure == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, cpInstanceUnitOfMeasure);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (CPInstanceUnitOfMeasure cpInstanceUnitOfMeasure :
-					(List<CPInstanceUnitOfMeasure>)query.list()) {
-
-				map.put(
-					cpInstanceUnitOfMeasure.getPrimaryKeyObj(),
-					cpInstanceUnitOfMeasure);
-
-				cacheResult(cpInstanceUnitOfMeasure);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2588,9 +2296,6 @@ public class CPInstanceUnitOfMeasurePersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"cpInstanceUnitOfMeasure.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CPInstanceUnitOfMeasure exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CPInstanceUnitOfMeasure exists with the key {";
 
@@ -2609,4 +2314,4 @@ public class CPInstanceUnitOfMeasurePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:717673906
+// LIFERAY-SERVICE-BUILDER-HASH:769388678

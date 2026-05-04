@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CPInstanceOptionValueRelPersistence.class)
 public class CPInstanceOptionValueRelPersistenceImpl
-	extends BasePersistenceImpl<CPInstanceOptionValueRel>
+	extends BasePersistenceImpl
+		<CPInstanceOptionValueRel, NoSuchCPInstanceOptionValueRelException>
 	implements CPInstanceOptionValueRelPersistence {
 
 	/*
@@ -1367,55 +1367,6 @@ public class CPInstanceOptionValueRelPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all cp instance option value rels.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CPInstanceOptionValueRelImpl.class);
-
-		finderCache.clearCache(CPInstanceOptionValueRelImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the cp instance option value rel.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(CPInstanceOptionValueRel cpInstanceOptionValueRel) {
-		entityCache.removeResult(
-			CPInstanceOptionValueRelImpl.class, cpInstanceOptionValueRel);
-	}
-
-	@Override
-	public void clearCache(
-		List<CPInstanceOptionValueRel> cpInstanceOptionValueRels) {
-
-		for (CPInstanceOptionValueRel cpInstanceOptionValueRel :
-				cpInstanceOptionValueRels) {
-
-			entityCache.removeResult(
-				CPInstanceOptionValueRelImpl.class, cpInstanceOptionValueRel);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CPInstanceOptionValueRelImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				CPInstanceOptionValueRelImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		CPInstanceOptionValueRelModelImpl cpInstanceOptionValueRelModelImpl) {
 
@@ -1491,48 +1442,6 @@ public class CPInstanceOptionValueRelPersistenceImpl
 		throws NoSuchCPInstanceOptionValueRelException {
 
 		return remove((Serializable)CPInstanceOptionValueRelId);
-	}
-
-	/**
-	 * Removes the cp instance option value rel with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the cp instance option value rel
-	 * @return the cp instance option value rel that was removed
-	 * @throws NoSuchCPInstanceOptionValueRelException if a cp instance option value rel with the primary key could not be found
-	 */
-	@Override
-	public CPInstanceOptionValueRel remove(Serializable primaryKey)
-		throws NoSuchCPInstanceOptionValueRelException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CPInstanceOptionValueRel cpInstanceOptionValueRel =
-				(CPInstanceOptionValueRel)session.get(
-					CPInstanceOptionValueRelImpl.class, primaryKey);
-
-			if (cpInstanceOptionValueRel == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCPInstanceOptionValueRelException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(cpInstanceOptionValueRel);
-		}
-		catch (NoSuchCPInstanceOptionValueRelException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1673,32 +1582,6 @@ public class CPInstanceOptionValueRelPersistenceImpl
 	}
 
 	/**
-	 * Returns the cp instance option value rel with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cp instance option value rel
-	 * @return the cp instance option value rel
-	 * @throws NoSuchCPInstanceOptionValueRelException if a cp instance option value rel with the primary key could not be found
-	 */
-	@Override
-	public CPInstanceOptionValueRel findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCPInstanceOptionValueRelException {
-
-		CPInstanceOptionValueRel cpInstanceOptionValueRel = fetchByPrimaryKey(
-			primaryKey);
-
-		if (cpInstanceOptionValueRel == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCPInstanceOptionValueRelException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return cpInstanceOptionValueRel;
-	}
-
-	/**
 	 * Returns the cp instance option value rel with the primary key or throws a <code>NoSuchCPInstanceOptionValueRelException</code> if it could not be found.
 	 *
 	 * @param CPInstanceOptionValueRelId the primary key of the cp instance option value rel
@@ -1713,53 +1596,9 @@ public class CPInstanceOptionValueRelPersistenceImpl
 		return findByPrimaryKey((Serializable)CPInstanceOptionValueRelId);
 	}
 
-	/**
-	 * Returns the cp instance option value rel with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cp instance option value rel
-	 * @return the cp instance option value rel, or <code>null</code> if a cp instance option value rel with the primary key could not be found
-	 */
 	@Override
-	public CPInstanceOptionValueRel fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				CPInstanceOptionValueRel.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		CPInstanceOptionValueRel cpInstanceOptionValueRel =
-			(CPInstanceOptionValueRel)entityCache.getResult(
-				CPInstanceOptionValueRelImpl.class, primaryKey);
-
-		if (cpInstanceOptionValueRel != null) {
-			return cpInstanceOptionValueRel;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			cpInstanceOptionValueRel = (CPInstanceOptionValueRel)session.get(
-				CPInstanceOptionValueRelImpl.class, primaryKey);
-
-			if (cpInstanceOptionValueRel != null) {
-				cacheResult(cpInstanceOptionValueRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return cpInstanceOptionValueRel;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1773,137 +1612,6 @@ public class CPInstanceOptionValueRelPersistenceImpl
 		long CPInstanceOptionValueRelId) {
 
 		return fetchByPrimaryKey((Serializable)CPInstanceOptionValueRelId);
-	}
-
-	@Override
-	public Map<Serializable, CPInstanceOptionValueRel> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				CPInstanceOptionValueRel.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, CPInstanceOptionValueRel> map =
-			new HashMap<Serializable, CPInstanceOptionValueRel>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			CPInstanceOptionValueRel cpInstanceOptionValueRel =
-				fetchByPrimaryKey(primaryKey);
-
-			if (cpInstanceOptionValueRel != null) {
-				map.put(primaryKey, cpInstanceOptionValueRel);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						CPInstanceOptionValueRel.class, primaryKey)) {
-
-				CPInstanceOptionValueRel cpInstanceOptionValueRel =
-					(CPInstanceOptionValueRel)entityCache.getResult(
-						CPInstanceOptionValueRelImpl.class, primaryKey);
-
-				if (cpInstanceOptionValueRel == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, cpInstanceOptionValueRel);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (CPInstanceOptionValueRel cpInstanceOptionValueRel :
-					(List<CPInstanceOptionValueRel>)query.list()) {
-
-				map.put(
-					cpInstanceOptionValueRel.getPrimaryKeyObj(),
-					cpInstanceOptionValueRel);
-
-				cacheResult(cpInstanceOptionValueRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2509,9 +2217,6 @@ public class CPInstanceOptionValueRelPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"cpInstanceOptionValueRel.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CPInstanceOptionValueRel exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CPInstanceOptionValueRel exists with the key {";
 
@@ -2527,4 +2232,4 @@ public class CPInstanceOptionValueRelPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-524949967
+// LIFERAY-SERVICE-BUILDER-HASH:-1872125241

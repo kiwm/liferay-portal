@@ -66,7 +66,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -91,7 +90,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = MBMessagePersistence.class)
 public class MBMessagePersistenceImpl
-	extends BasePersistenceImpl<MBMessage> implements MBMessagePersistence {
+	extends BasePersistenceImpl<MBMessage, NoSuchMessageException>
+	implements MBMessagePersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -9711,48 +9711,6 @@ public class MBMessagePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all message-boards messages.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(MBMessageImpl.class);
-
-		finderCache.clearCache(MBMessageImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the message-boards message.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(MBMessage mbMessage) {
-		entityCache.removeResult(MBMessageImpl.class, mbMessage);
-	}
-
-	@Override
-	public void clearCache(List<MBMessage> mbMessages) {
-		for (MBMessage mbMessage : mbMessages) {
-			entityCache.removeResult(MBMessageImpl.class, mbMessage);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(MBMessageImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(MBMessageImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		MBMessageModelImpl mbMessageModelImpl) {
 
@@ -9817,47 +9775,6 @@ public class MBMessagePersistenceImpl
 	@Override
 	public MBMessage remove(long messageId) throws NoSuchMessageException {
 		return remove((Serializable)messageId);
-	}
-
-	/**
-	 * Removes the message-boards message with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the message-boards message
-	 * @return the message-boards message that was removed
-	 * @throws NoSuchMessageException if a message-boards message with the primary key could not be found
-	 */
-	@Override
-	public MBMessage remove(Serializable primaryKey)
-		throws NoSuchMessageException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			MBMessage mbMessage = (MBMessage)session.get(
-				MBMessageImpl.class, primaryKey);
-
-			if (mbMessage == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchMessageException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(mbMessage);
-		}
-		catch (NoSuchMessageException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -10067,31 +9984,6 @@ public class MBMessagePersistenceImpl
 	}
 
 	/**
-	 * Returns the message-boards message with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the message-boards message
-	 * @return the message-boards message
-	 * @throws NoSuchMessageException if a message-boards message with the primary key could not be found
-	 */
-	@Override
-	public MBMessage findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchMessageException {
-
-		MBMessage mbMessage = fetchByPrimaryKey(primaryKey);
-
-		if (mbMessage == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchMessageException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return mbMessage;
-	}
-
-	/**
 	 * Returns the message-boards message with the primary key or throws a <code>NoSuchMessageException</code> if it could not be found.
 	 *
 	 * @param messageId the primary key of the message-boards message
@@ -10105,49 +9997,9 @@ public class MBMessagePersistenceImpl
 		return findByPrimaryKey((Serializable)messageId);
 	}
 
-	/**
-	 * Returns the message-boards message with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the message-boards message
-	 * @return the message-boards message, or <code>null</code> if a message-boards message with the primary key could not be found
-	 */
 	@Override
-	public MBMessage fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(MBMessage.class, primaryKey)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		MBMessage mbMessage = (MBMessage)entityCache.getResult(
-			MBMessageImpl.class, primaryKey);
-
-		if (mbMessage != null) {
-			return mbMessage;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			mbMessage = (MBMessage)session.get(MBMessageImpl.class, primaryKey);
-
-			if (mbMessage != null) {
-				cacheResult(mbMessage);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return mbMessage;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -10159,129 +10011,6 @@ public class MBMessagePersistenceImpl
 	@Override
 	public MBMessage fetchByPrimaryKey(long messageId) {
 		return fetchByPrimaryKey((Serializable)messageId);
-	}
-
-	@Override
-	public Map<Serializable, MBMessage> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(MBMessage.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, MBMessage> map =
-			new HashMap<Serializable, MBMessage>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			MBMessage mbMessage = fetchByPrimaryKey(primaryKey);
-
-			if (mbMessage != null) {
-				map.put(primaryKey, mbMessage);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						MBMessage.class, primaryKey)) {
-
-				MBMessage mbMessage = (MBMessage)entityCache.getResult(
-					MBMessageImpl.class, primaryKey);
-
-				if (mbMessage == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, mbMessage);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (MBMessage mbMessage : (List<MBMessage>)query.list()) {
-				map.put(mbMessage.getPrimaryKeyObj(), mbMessage);
-
-				cacheResult(mbMessage);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -11584,9 +11313,6 @@ public class MBMessagePersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "MBMessage.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No MBMessage exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No MBMessage exists with the key {";
 
@@ -11602,4 +11328,4 @@ public class MBMessagePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1433628033
+// LIFERAY-SERVICE-BUILDER-HASH:-2108179986

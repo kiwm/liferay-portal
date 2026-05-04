@@ -39,6 +39,7 @@ import com.liferay.portal.kernel.service.persistence.OrganizationPersistence;
 import com.liferay.portal.kernel.service.persistence.RolePersistence;
 import com.liferay.portal.kernel.service.persistence.UserGroupPersistence;
 import com.liferay.portal.kernel.service.persistence.UserPersistence;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -71,7 +72,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -88,7 +88,8 @@ import java.util.Set;
  * @generated
  */
 public class GroupPersistenceImpl
-	extends BasePersistenceImpl<Group> implements GroupPersistence {
+	extends BasePersistenceImpl<Group, NoSuchGroupException>
+	implements GroupPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -5558,48 +5559,6 @@ public class GroupPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all groups.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(GroupImpl.class);
-
-		FinderCacheUtil.clearCache(GroupImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the group.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(Group group) {
-		EntityCacheUtil.removeResult(GroupImpl.class, group);
-	}
-
-	@Override
-	public void clearCache(List<Group> groups) {
-		for (Group group : groups) {
-			EntityCacheUtil.removeResult(GroupImpl.class, group);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(GroupImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(GroupImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(GroupModelImpl groupModelImpl) {
 		try (SafeCloseable safeCloseable =
 				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
@@ -5692,44 +5651,6 @@ public class GroupPersistenceImpl
 	@Override
 	public Group remove(long groupId) throws NoSuchGroupException {
 		return remove((Serializable)groupId);
-	}
-
-	/**
-	 * Removes the group with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the group
-	 * @return the group that was removed
-	 * @throws NoSuchGroupException if a group with the primary key could not be found
-	 */
-	@Override
-	public Group remove(Serializable primaryKey) throws NoSuchGroupException {
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Group group = (Group)session.get(GroupImpl.class, primaryKey);
-
-			if (group == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchGroupException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(group);
-		}
-		catch (NoSuchGroupException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -5913,31 +5834,6 @@ public class GroupPersistenceImpl
 	}
 
 	/**
-	 * Returns the group with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the group
-	 * @return the group
-	 * @throws NoSuchGroupException if a group with the primary key could not be found
-	 */
-	@Override
-	public Group findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchGroupException {
-
-		Group group = fetchByPrimaryKey(primaryKey);
-
-		if (group == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchGroupException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return group;
-	}
-
-	/**
 	 * Returns the group with the primary key or throws a <code>NoSuchGroupException</code> if it could not be found.
 	 *
 	 * @param groupId the primary key of the group
@@ -5949,49 +5845,9 @@ public class GroupPersistenceImpl
 		return findByPrimaryKey((Serializable)groupId);
 	}
 
-	/**
-	 * Returns the group with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the group
-	 * @return the group, or <code>null</code> if a group with the primary key could not be found
-	 */
 	@Override
-	public Group fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(Group.class, primaryKey)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		Group group = (Group)EntityCacheUtil.getResult(
-			GroupImpl.class, primaryKey);
-
-		if (group != null) {
-			return group;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			group = (Group)session.get(GroupImpl.class, primaryKey);
-
-			if (group != null) {
-				cacheResult(group);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return group;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -6003,128 +5859,6 @@ public class GroupPersistenceImpl
 	@Override
 	public Group fetchByPrimaryKey(long groupId) {
 		return fetchByPrimaryKey((Serializable)groupId);
-	}
-
-	@Override
-	public Map<Serializable, Group> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(Group.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, Group> map = new HashMap<Serializable, Group>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			Group group = fetchByPrimaryKey(primaryKey);
-
-			if (group != null) {
-				map.put(primaryKey, group);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						Group.class, primaryKey)) {
-
-				Group group = (Group)EntityCacheUtil.getResult(
-					GroupImpl.class, primaryKey);
-
-				if (group == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, group);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (Group group : (List<Group>)query.list()) {
-				map.put(group.getPrimaryKeyObj(), group);
-
-				cacheResult(group);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -8665,9 +8399,6 @@ public class GroupPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "group_.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No Group exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No Group exists with the key {";
 
@@ -8683,4 +8414,4 @@ public class GroupPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1142201651
+// LIFERAY-SERVICE-BUILDER-HASH:-573264566

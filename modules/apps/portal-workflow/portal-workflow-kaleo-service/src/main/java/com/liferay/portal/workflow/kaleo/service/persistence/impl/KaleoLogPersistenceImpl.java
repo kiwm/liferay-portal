@@ -51,7 +51,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,7 +74,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = KaleoLogPersistence.class)
 public class KaleoLogPersistenceImpl
-	extends BasePersistenceImpl<KaleoLog> implements KaleoLogPersistence {
+	extends BasePersistenceImpl<KaleoLog, NoSuchLogException>
+	implements KaleoLogPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -1188,48 +1188,6 @@ public class KaleoLogPersistenceImpl
 	}
 
 	/**
-	 * Clears the cache for all kaleo logs.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(KaleoLogImpl.class);
-
-		finderCache.clearCache(KaleoLogImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the kaleo log.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(KaleoLog kaleoLog) {
-		entityCache.removeResult(KaleoLogImpl.class, kaleoLog);
-	}
-
-	@Override
-	public void clearCache(List<KaleoLog> kaleoLogs) {
-		for (KaleoLog kaleoLog : kaleoLogs) {
-			entityCache.removeResult(KaleoLogImpl.class, kaleoLog);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(KaleoLogImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(KaleoLogImpl.class, primaryKey);
-		}
-	}
-
-	/**
 	 * Creates a new kaleo log with the primary key. Does not add the kaleo log to the database.
 	 *
 	 * @param kaleoLogId the primary key for the new kaleo log
@@ -1257,45 +1215,6 @@ public class KaleoLogPersistenceImpl
 	@Override
 	public KaleoLog remove(long kaleoLogId) throws NoSuchLogException {
 		return remove((Serializable)kaleoLogId);
-	}
-
-	/**
-	 * Removes the kaleo log with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the kaleo log
-	 * @return the kaleo log that was removed
-	 * @throws NoSuchLogException if a kaleo log with the primary key could not be found
-	 */
-	@Override
-	public KaleoLog remove(Serializable primaryKey) throws NoSuchLogException {
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			KaleoLog kaleoLog = (KaleoLog)session.get(
-				KaleoLogImpl.class, primaryKey);
-
-			if (kaleoLog == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchLogException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(kaleoLog);
-		}
-		catch (NoSuchLogException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1410,31 +1329,6 @@ public class KaleoLogPersistenceImpl
 	}
 
 	/**
-	 * Returns the kaleo log with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kaleo log
-	 * @return the kaleo log
-	 * @throws NoSuchLogException if a kaleo log with the primary key could not be found
-	 */
-	@Override
-	public KaleoLog findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchLogException {
-
-		KaleoLog kaleoLog = fetchByPrimaryKey(primaryKey);
-
-		if (kaleoLog == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchLogException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return kaleoLog;
-	}
-
-	/**
 	 * Returns the kaleo log with the primary key or throws a <code>NoSuchLogException</code> if it could not be found.
 	 *
 	 * @param kaleoLogId the primary key of the kaleo log
@@ -1448,49 +1342,9 @@ public class KaleoLogPersistenceImpl
 		return findByPrimaryKey((Serializable)kaleoLogId);
 	}
 
-	/**
-	 * Returns the kaleo log with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kaleo log
-	 * @return the kaleo log, or <code>null</code> if a kaleo log with the primary key could not be found
-	 */
 	@Override
-	public KaleoLog fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(KaleoLog.class, primaryKey)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		KaleoLog kaleoLog = (KaleoLog)entityCache.getResult(
-			KaleoLogImpl.class, primaryKey);
-
-		if (kaleoLog != null) {
-			return kaleoLog;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			kaleoLog = (KaleoLog)session.get(KaleoLogImpl.class, primaryKey);
-
-			if (kaleoLog != null) {
-				cacheResult(kaleoLog);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return kaleoLog;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1502,128 +1356,6 @@ public class KaleoLogPersistenceImpl
 	@Override
 	public KaleoLog fetchByPrimaryKey(long kaleoLogId) {
 		return fetchByPrimaryKey((Serializable)kaleoLogId);
-	}
-
-	@Override
-	public Map<Serializable, KaleoLog> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(KaleoLog.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, KaleoLog> map = new HashMap<Serializable, KaleoLog>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			KaleoLog kaleoLog = fetchByPrimaryKey(primaryKey);
-
-			if (kaleoLog != null) {
-				map.put(primaryKey, kaleoLog);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						KaleoLog.class, primaryKey)) {
-
-				KaleoLog kaleoLog = (KaleoLog)entityCache.getResult(
-					KaleoLogImpl.class, primaryKey);
-
-				if (kaleoLog == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, kaleoLog);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (KaleoLog kaleoLog : (List<KaleoLog>)query.list()) {
-				map.put(kaleoLog.getPrimaryKeyObj(), kaleoLog);
-
-				cacheResult(kaleoLog);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2219,9 +1951,6 @@ public class KaleoLogPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "kaleoLog.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No KaleoLog exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No KaleoLog exists with the key {";
 
@@ -2237,4 +1966,4 @@ public class KaleoLogPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:838400341
+// LIFERAY-SERVICE-BUILDER-HASH:1939540722

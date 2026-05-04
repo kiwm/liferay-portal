@@ -25,6 +25,7 @@ import com.liferay.portal.kernel.dao.orm.Session;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -50,7 +51,6 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -66,7 +66,7 @@ import java.util.Set;
  * @generated
  */
 public class AssetTagGroupRelPersistenceImpl
-	extends BasePersistenceImpl<AssetTagGroupRel>
+	extends BasePersistenceImpl<AssetTagGroupRel, NoSuchTagGroupRelException>
 	implements AssetTagGroupRelPersistence {
 
 	/*
@@ -991,51 +991,6 @@ public class AssetTagGroupRelPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all asset tag group rels.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(AssetTagGroupRelImpl.class);
-
-		FinderCacheUtil.clearCache(AssetTagGroupRelImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the asset tag group rel.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(AssetTagGroupRel assetTagGroupRel) {
-		EntityCacheUtil.removeResult(
-			AssetTagGroupRelImpl.class, assetTagGroupRel);
-	}
-
-	@Override
-	public void clearCache(List<AssetTagGroupRel> assetTagGroupRels) {
-		for (AssetTagGroupRel assetTagGroupRel : assetTagGroupRels) {
-			EntityCacheUtil.removeResult(
-				AssetTagGroupRelImpl.class, assetTagGroupRel);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(AssetTagGroupRelImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(
-				AssetTagGroupRelImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		AssetTagGroupRelModelImpl assetTagGroupRelModelImpl) {
 
@@ -1095,47 +1050,6 @@ public class AssetTagGroupRelPersistenceImpl
 		throws NoSuchTagGroupRelException {
 
 		return remove((Serializable)assetTagGroupRelId);
-	}
-
-	/**
-	 * Removes the asset tag group rel with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the asset tag group rel
-	 * @return the asset tag group rel that was removed
-	 * @throws NoSuchTagGroupRelException if a asset tag group rel with the primary key could not be found
-	 */
-	@Override
-	public AssetTagGroupRel remove(Serializable primaryKey)
-		throws NoSuchTagGroupRelException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			AssetTagGroupRel assetTagGroupRel = (AssetTagGroupRel)session.get(
-				AssetTagGroupRelImpl.class, primaryKey);
-
-			if (assetTagGroupRel == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchTagGroupRelException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(assetTagGroupRel);
-		}
-		catch (NoSuchTagGroupRelException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1242,31 +1156,6 @@ public class AssetTagGroupRelPersistenceImpl
 	}
 
 	/**
-	 * Returns the asset tag group rel with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the asset tag group rel
-	 * @return the asset tag group rel
-	 * @throws NoSuchTagGroupRelException if a asset tag group rel with the primary key could not be found
-	 */
-	@Override
-	public AssetTagGroupRel findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchTagGroupRelException {
-
-		AssetTagGroupRel assetTagGroupRel = fetchByPrimaryKey(primaryKey);
-
-		if (assetTagGroupRel == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchTagGroupRelException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return assetTagGroupRel;
-	}
-
-	/**
 	 * Returns the asset tag group rel with the primary key or throws a <code>NoSuchTagGroupRelException</code> if it could not be found.
 	 *
 	 * @param assetTagGroupRelId the primary key of the asset tag group rel
@@ -1280,53 +1169,9 @@ public class AssetTagGroupRelPersistenceImpl
 		return findByPrimaryKey((Serializable)assetTagGroupRelId);
 	}
 
-	/**
-	 * Returns the asset tag group rel with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the asset tag group rel
-	 * @return the asset tag group rel, or <code>null</code> if a asset tag group rel with the primary key could not be found
-	 */
 	@Override
-	public AssetTagGroupRel fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				AssetTagGroupRel.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		AssetTagGroupRel assetTagGroupRel =
-			(AssetTagGroupRel)EntityCacheUtil.getResult(
-				AssetTagGroupRelImpl.class, primaryKey);
-
-		if (assetTagGroupRel != null) {
-			return assetTagGroupRel;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			assetTagGroupRel = (AssetTagGroupRel)session.get(
-				AssetTagGroupRelImpl.class, primaryKey);
-
-			if (assetTagGroupRel != null) {
-				cacheResult(assetTagGroupRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return assetTagGroupRel;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -1338,132 +1183,6 @@ public class AssetTagGroupRelPersistenceImpl
 	@Override
 	public AssetTagGroupRel fetchByPrimaryKey(long assetTagGroupRelId) {
 		return fetchByPrimaryKey((Serializable)assetTagGroupRelId);
-	}
-
-	@Override
-	public Map<Serializable, AssetTagGroupRel> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(AssetTagGroupRel.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, AssetTagGroupRel> map =
-			new HashMap<Serializable, AssetTagGroupRel>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			AssetTagGroupRel assetTagGroupRel = fetchByPrimaryKey(primaryKey);
-
-			if (assetTagGroupRel != null) {
-				map.put(primaryKey, assetTagGroupRel);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						AssetTagGroupRel.class, primaryKey)) {
-
-				AssetTagGroupRel assetTagGroupRel =
-					(AssetTagGroupRel)EntityCacheUtil.getResult(
-						AssetTagGroupRelImpl.class, primaryKey);
-
-				if (assetTagGroupRel == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, assetTagGroupRel);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (AssetTagGroupRel assetTagGroupRel :
-					(List<AssetTagGroupRel>)query.list()) {
-
-				map.put(assetTagGroupRel.getPrimaryKeyObj(), assetTagGroupRel);
-
-				cacheResult(assetTagGroupRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1924,9 +1643,6 @@ public class AssetTagGroupRelPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "assetTagGroupRel.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No AssetTagGroupRel exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No AssetTagGroupRel exists with the key {";
 
@@ -1942,4 +1658,4 @@ public class AssetTagGroupRelPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1420736200
+// LIFERAY-SERVICE-BUILDER-HASH:-1303874736

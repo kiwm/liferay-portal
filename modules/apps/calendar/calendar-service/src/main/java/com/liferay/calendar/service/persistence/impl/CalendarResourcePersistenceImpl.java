@@ -59,7 +59,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -84,7 +83,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CalendarResourcePersistence.class)
 public class CalendarResourcePersistenceImpl
-	extends BasePersistenceImpl<CalendarResource>
+	extends BasePersistenceImpl<CalendarResource, NoSuchResourceException>
 	implements CalendarResourcePersistence {
 
 	/*
@@ -2960,49 +2959,6 @@ public class CalendarResourcePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all calendar resources.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CalendarResourceImpl.class);
-
-		finderCache.clearCache(CalendarResourceImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the calendar resource.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(CalendarResource calendarResource) {
-		entityCache.removeResult(CalendarResourceImpl.class, calendarResource);
-	}
-
-	@Override
-	public void clearCache(List<CalendarResource> calendarResources) {
-		for (CalendarResource calendarResource : calendarResources) {
-			entityCache.removeResult(
-				CalendarResourceImpl.class, calendarResource);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CalendarResourceImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(CalendarResourceImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		CalendarResourceModelImpl calendarResourceModelImpl) {
 
@@ -3062,47 +3018,6 @@ public class CalendarResourcePersistenceImpl
 		throws NoSuchResourceException {
 
 		return remove((Serializable)calendarResourceId);
-	}
-
-	/**
-	 * Removes the calendar resource with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the calendar resource
-	 * @return the calendar resource that was removed
-	 * @throws NoSuchResourceException if a calendar resource with the primary key could not be found
-	 */
-	@Override
-	public CalendarResource remove(Serializable primaryKey)
-		throws NoSuchResourceException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CalendarResource calendarResource = (CalendarResource)session.get(
-				CalendarResourceImpl.class, primaryKey);
-
-			if (calendarResource == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchResourceException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(calendarResource);
-		}
-		catch (NoSuchResourceException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -3234,31 +3149,6 @@ public class CalendarResourcePersistenceImpl
 	}
 
 	/**
-	 * Returns the calendar resource with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the calendar resource
-	 * @return the calendar resource
-	 * @throws NoSuchResourceException if a calendar resource with the primary key could not be found
-	 */
-	@Override
-	public CalendarResource findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchResourceException {
-
-		CalendarResource calendarResource = fetchByPrimaryKey(primaryKey);
-
-		if (calendarResource == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchResourceException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return calendarResource;
-	}
-
-	/**
 	 * Returns the calendar resource with the primary key or throws a <code>NoSuchResourceException</code> if it could not be found.
 	 *
 	 * @param calendarResourceId the primary key of the calendar resource
@@ -3272,53 +3162,9 @@ public class CalendarResourcePersistenceImpl
 		return findByPrimaryKey((Serializable)calendarResourceId);
 	}
 
-	/**
-	 * Returns the calendar resource with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the calendar resource
-	 * @return the calendar resource, or <code>null</code> if a calendar resource with the primary key could not be found
-	 */
 	@Override
-	public CalendarResource fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				CalendarResource.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		CalendarResource calendarResource =
-			(CalendarResource)entityCache.getResult(
-				CalendarResourceImpl.class, primaryKey);
-
-		if (calendarResource != null) {
-			return calendarResource;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			calendarResource = (CalendarResource)session.get(
-				CalendarResourceImpl.class, primaryKey);
-
-			if (calendarResource != null) {
-				cacheResult(calendarResource);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return calendarResource;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -3330,132 +3176,6 @@ public class CalendarResourcePersistenceImpl
 	@Override
 	public CalendarResource fetchByPrimaryKey(long calendarResourceId) {
 		return fetchByPrimaryKey((Serializable)calendarResourceId);
-	}
-
-	@Override
-	public Map<Serializable, CalendarResource> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(CalendarResource.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, CalendarResource> map =
-			new HashMap<Serializable, CalendarResource>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			CalendarResource calendarResource = fetchByPrimaryKey(primaryKey);
-
-			if (calendarResource != null) {
-				map.put(primaryKey, calendarResource);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						CalendarResource.class, primaryKey)) {
-
-				CalendarResource calendarResource =
-					(CalendarResource)entityCache.getResult(
-						CalendarResourceImpl.class, primaryKey);
-
-				if (calendarResource == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, calendarResource);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (CalendarResource calendarResource :
-					(List<CalendarResource>)query.list()) {
-
-				map.put(calendarResource.getPrimaryKeyObj(), calendarResource);
-
-				cacheResult(calendarResource);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -4085,9 +3805,6 @@ public class CalendarResourcePersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "CalendarResource.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CalendarResource exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CalendarResource exists with the key {";
 
@@ -4103,4 +3820,4 @@ public class CalendarResourcePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:821017275
+// LIFERAY-SERVICE-BUILDER-HASH:-1333871204

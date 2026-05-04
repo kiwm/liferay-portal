@@ -40,6 +40,7 @@ import com.liferay.portal.kernel.service.persistence.TeamPersistence;
 import com.liferay.portal.kernel.service.persistence.UserGroupPersistence;
 import com.liferay.portal.kernel.service.persistence.UserPersistence;
 import com.liferay.portal.kernel.service.persistence.UserUtil;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -73,7 +74,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -90,7 +90,8 @@ import java.util.Set;
  * @generated
  */
 public class UserPersistenceImpl
-	extends BasePersistenceImpl<User> implements UserPersistence {
+	extends BasePersistenceImpl<User, NoSuchUserException>
+	implements UserPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -3876,48 +3877,6 @@ public class UserPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all users.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(UserImpl.class);
-
-		FinderCacheUtil.clearCache(UserImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the user.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(User user) {
-		EntityCacheUtil.removeResult(UserImpl.class, user);
-	}
-
-	@Override
-	public void clearCache(List<User> users) {
-		for (User user : users) {
-			EntityCacheUtil.removeResult(UserImpl.class, user);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(UserImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(UserImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(UserModelImpl userModelImpl) {
 		try (SafeCloseable safeCloseable =
 				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
@@ -3991,44 +3950,6 @@ public class UserPersistenceImpl
 	@Override
 	public User remove(long userId) throws NoSuchUserException {
 		return remove((Serializable)userId);
-	}
-
-	/**
-	 * Removes the user with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the user
-	 * @return the user that was removed
-	 * @throws NoSuchUserException if a user with the primary key could not be found
-	 */
-	@Override
-	public User remove(Serializable primaryKey) throws NoSuchUserException {
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			User user = (User)session.get(UserImpl.class, primaryKey);
-
-			if (user == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchUserException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(user);
-		}
-		catch (NoSuchUserException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -4224,31 +4145,6 @@ public class UserPersistenceImpl
 	}
 
 	/**
-	 * Returns the user with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the user
-	 * @return the user
-	 * @throws NoSuchUserException if a user with the primary key could not be found
-	 */
-	@Override
-	public User findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchUserException {
-
-		User user = fetchByPrimaryKey(primaryKey);
-
-		if (user == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchUserException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return user;
-	}
-
-	/**
 	 * Returns the user with the primary key or throws a <code>NoSuchUserException</code> if it could not be found.
 	 *
 	 * @param userId the primary key of the user
@@ -4260,48 +4156,9 @@ public class UserPersistenceImpl
 		return findByPrimaryKey((Serializable)userId);
 	}
 
-	/**
-	 * Returns the user with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the user
-	 * @return the user, or <code>null</code> if a user with the primary key could not be found
-	 */
 	@Override
-	public User fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(User.class, primaryKey)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		User user = (User)EntityCacheUtil.getResult(UserImpl.class, primaryKey);
-
-		if (user != null) {
-			return user;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			user = (User)session.get(UserImpl.class, primaryKey);
-
-			if (user != null) {
-				cacheResult(user);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return user;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -4313,128 +4170,6 @@ public class UserPersistenceImpl
 	@Override
 	public User fetchByPrimaryKey(long userId) {
 		return fetchByPrimaryKey((Serializable)userId);
-	}
-
-	@Override
-	public Map<Serializable, User> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(User.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, User> map = new HashMap<Serializable, User>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			User user = fetchByPrimaryKey(primaryKey);
-
-			if (user != null) {
-				map.put(primaryKey, user);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						User.class, primaryKey)) {
-
-				User user = (User)EntityCacheUtil.getResult(
-					UserImpl.class, primaryKey);
-
-				if (user == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, user);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (User user : (List<User>)query.list()) {
-				map.put(user.getPrimaryKeyObj(), user);
-
-				cacheResult(user);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -6891,9 +6626,6 @@ public class UserPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "user.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No User exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No User exists with the key {";
 
@@ -6909,4 +6641,4 @@ public class UserPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:199693202
+// LIFERAY-SERVICE-BUILDER-HASH:525438833

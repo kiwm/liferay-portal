@@ -55,7 +55,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -79,7 +78,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = FriendlyURLEntryPersistence.class)
 public class FriendlyURLEntryPersistenceImpl
-	extends BasePersistenceImpl<FriendlyURLEntry>
+	extends BasePersistenceImpl
+		<FriendlyURLEntry, NoSuchFriendlyURLEntryException>
 	implements FriendlyURLEntryPersistence {
 
 	/*
@@ -1102,49 +1102,6 @@ public class FriendlyURLEntryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all friendly url entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(FriendlyURLEntryImpl.class);
-
-		finderCache.clearCache(FriendlyURLEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the friendly url entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(FriendlyURLEntry friendlyURLEntry) {
-		entityCache.removeResult(FriendlyURLEntryImpl.class, friendlyURLEntry);
-	}
-
-	@Override
-	public void clearCache(List<FriendlyURLEntry> friendlyURLEntries) {
-		for (FriendlyURLEntry friendlyURLEntry : friendlyURLEntries) {
-			entityCache.removeResult(
-				FriendlyURLEntryImpl.class, friendlyURLEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(FriendlyURLEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(FriendlyURLEntryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		FriendlyURLEntryModelImpl friendlyURLEntryModelImpl) {
 
@@ -1196,47 +1153,6 @@ public class FriendlyURLEntryPersistenceImpl
 		throws NoSuchFriendlyURLEntryException {
 
 		return remove((Serializable)friendlyURLEntryId);
-	}
-
-	/**
-	 * Removes the friendly url entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the friendly url entry
-	 * @return the friendly url entry that was removed
-	 * @throws NoSuchFriendlyURLEntryException if a friendly url entry with the primary key could not be found
-	 */
-	@Override
-	public FriendlyURLEntry remove(Serializable primaryKey)
-		throws NoSuchFriendlyURLEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			FriendlyURLEntry friendlyURLEntry = (FriendlyURLEntry)session.get(
-				FriendlyURLEntryImpl.class, primaryKey);
-
-			if (friendlyURLEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchFriendlyURLEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(friendlyURLEntry);
-		}
-		catch (NoSuchFriendlyURLEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1371,31 +1287,6 @@ public class FriendlyURLEntryPersistenceImpl
 	}
 
 	/**
-	 * Returns the friendly url entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the friendly url entry
-	 * @return the friendly url entry
-	 * @throws NoSuchFriendlyURLEntryException if a friendly url entry with the primary key could not be found
-	 */
-	@Override
-	public FriendlyURLEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchFriendlyURLEntryException {
-
-		FriendlyURLEntry friendlyURLEntry = fetchByPrimaryKey(primaryKey);
-
-		if (friendlyURLEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchFriendlyURLEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return friendlyURLEntry;
-	}
-
-	/**
 	 * Returns the friendly url entry with the primary key or throws a <code>NoSuchFriendlyURLEntryException</code> if it could not be found.
 	 *
 	 * @param friendlyURLEntryId the primary key of the friendly url entry
@@ -1409,53 +1300,9 @@ public class FriendlyURLEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)friendlyURLEntryId);
 	}
 
-	/**
-	 * Returns the friendly url entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the friendly url entry
-	 * @return the friendly url entry, or <code>null</code> if a friendly url entry with the primary key could not be found
-	 */
 	@Override
-	public FriendlyURLEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				FriendlyURLEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		FriendlyURLEntry friendlyURLEntry =
-			(FriendlyURLEntry)entityCache.getResult(
-				FriendlyURLEntryImpl.class, primaryKey);
-
-		if (friendlyURLEntry != null) {
-			return friendlyURLEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			friendlyURLEntry = (FriendlyURLEntry)session.get(
-				FriendlyURLEntryImpl.class, primaryKey);
-
-			if (friendlyURLEntry != null) {
-				cacheResult(friendlyURLEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return friendlyURLEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1467,132 +1314,6 @@ public class FriendlyURLEntryPersistenceImpl
 	@Override
 	public FriendlyURLEntry fetchByPrimaryKey(long friendlyURLEntryId) {
 		return fetchByPrimaryKey((Serializable)friendlyURLEntryId);
-	}
-
-	@Override
-	public Map<Serializable, FriendlyURLEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(FriendlyURLEntry.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, FriendlyURLEntry> map =
-			new HashMap<Serializable, FriendlyURLEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			FriendlyURLEntry friendlyURLEntry = fetchByPrimaryKey(primaryKey);
-
-			if (friendlyURLEntry != null) {
-				map.put(primaryKey, friendlyURLEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						FriendlyURLEntry.class, primaryKey)) {
-
-				FriendlyURLEntry friendlyURLEntry =
-					(FriendlyURLEntry)entityCache.getResult(
-						FriendlyURLEntryImpl.class, primaryKey);
-
-				if (friendlyURLEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, friendlyURLEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (FriendlyURLEntry friendlyURLEntry :
-					(List<FriendlyURLEntry>)query.list()) {
-
-				map.put(friendlyURLEntry.getPrimaryKeyObj(), friendlyURLEntry);
-
-				cacheResult(friendlyURLEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2133,9 +1854,6 @@ public class FriendlyURLEntryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "friendlyURLEntry.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No FriendlyURLEntry exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No FriendlyURLEntry exists with the key {";
 
@@ -2151,4 +1869,4 @@ public class FriendlyURLEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-401262191
+// LIFERAY-SERVICE-BUILDER-HASH:-1313267845

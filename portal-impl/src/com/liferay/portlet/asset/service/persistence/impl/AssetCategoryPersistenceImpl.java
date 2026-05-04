@@ -36,6 +36,7 @@ import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
 import com.liferay.portal.kernel.security.permission.InlineSQLHelperUtil;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -65,7 +66,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -82,7 +82,7 @@ import java.util.Set;
  * @generated
  */
 public class AssetCategoryPersistenceImpl
-	extends BasePersistenceImpl<AssetCategory>
+	extends BasePersistenceImpl<AssetCategory, NoSuchCategoryException>
 	implements AssetCategoryPersistence {
 
 	/*
@@ -5769,49 +5769,6 @@ public class AssetCategoryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all asset categories.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(AssetCategoryImpl.class);
-
-		FinderCacheUtil.clearCache(AssetCategoryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the asset category.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(AssetCategory assetCategory) {
-		EntityCacheUtil.removeResult(AssetCategoryImpl.class, assetCategory);
-	}
-
-	@Override
-	public void clearCache(List<AssetCategory> assetCategories) {
-		for (AssetCategory assetCategory : assetCategories) {
-			EntityCacheUtil.removeResult(
-				AssetCategoryImpl.class, assetCategory);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(AssetCategoryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(AssetCategoryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		AssetCategoryModelImpl assetCategoryModelImpl) {
 
@@ -5880,47 +5837,6 @@ public class AssetCategoryPersistenceImpl
 		throws NoSuchCategoryException {
 
 		return remove((Serializable)categoryId);
-	}
-
-	/**
-	 * Removes the asset category with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the asset category
-	 * @return the asset category that was removed
-	 * @throws NoSuchCategoryException if a asset category with the primary key could not be found
-	 */
-	@Override
-	public AssetCategory remove(Serializable primaryKey)
-		throws NoSuchCategoryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			AssetCategory assetCategory = (AssetCategory)session.get(
-				AssetCategoryImpl.class, primaryKey);
-
-			if (assetCategory == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCategoryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(assetCategory);
-		}
-		catch (NoSuchCategoryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -6112,31 +6028,6 @@ public class AssetCategoryPersistenceImpl
 	}
 
 	/**
-	 * Returns the asset category with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the asset category
-	 * @return the asset category
-	 * @throws NoSuchCategoryException if a asset category with the primary key could not be found
-	 */
-	@Override
-	public AssetCategory findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCategoryException {
-
-		AssetCategory assetCategory = fetchByPrimaryKey(primaryKey);
-
-		if (assetCategory == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCategoryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return assetCategory;
-	}
-
-	/**
 	 * Returns the asset category with the primary key or throws a <code>NoSuchCategoryException</code> if it could not be found.
 	 *
 	 * @param categoryId the primary key of the asset category
@@ -6150,52 +6041,9 @@ public class AssetCategoryPersistenceImpl
 		return findByPrimaryKey((Serializable)categoryId);
 	}
 
-	/**
-	 * Returns the asset category with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the asset category
-	 * @return the asset category, or <code>null</code> if a asset category with the primary key could not be found
-	 */
 	@Override
-	public AssetCategory fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				AssetCategory.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		AssetCategory assetCategory = (AssetCategory)EntityCacheUtil.getResult(
-			AssetCategoryImpl.class, primaryKey);
-
-		if (assetCategory != null) {
-			return assetCategory;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			assetCategory = (AssetCategory)session.get(
-				AssetCategoryImpl.class, primaryKey);
-
-			if (assetCategory != null) {
-				cacheResult(assetCategory);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return assetCategory;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -6207,132 +6055,6 @@ public class AssetCategoryPersistenceImpl
 	@Override
 	public AssetCategory fetchByPrimaryKey(long categoryId) {
 		return fetchByPrimaryKey((Serializable)categoryId);
-	}
-
-	@Override
-	public Map<Serializable, AssetCategory> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(AssetCategory.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, AssetCategory> map =
-			new HashMap<Serializable, AssetCategory>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			AssetCategory assetCategory = fetchByPrimaryKey(primaryKey);
-
-			if (assetCategory != null) {
-				map.put(primaryKey, assetCategory);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						AssetCategory.class, primaryKey)) {
-
-				AssetCategory assetCategory =
-					(AssetCategory)EntityCacheUtil.getResult(
-						AssetCategoryImpl.class, primaryKey);
-
-				if (assetCategory == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, assetCategory);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (AssetCategory assetCategory :
-					(List<AssetCategory>)query.list()) {
-
-				map.put(assetCategory.getPrimaryKeyObj(), assetCategory);
-
-				cacheResult(assetCategory);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -7124,9 +6846,6 @@ public class AssetCategoryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "AssetCategory.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No AssetCategory exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No AssetCategory exists with the key {";
 
@@ -7142,4 +6861,4 @@ public class AssetCategoryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1117810473
+// LIFERAY-SERVICE-BUILDER-HASH:538464968

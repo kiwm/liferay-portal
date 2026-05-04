@@ -36,6 +36,7 @@ import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -68,7 +69,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -85,7 +85,8 @@ import java.util.Set;
  * @generated
  */
 public class AssetTagPersistenceImpl
-	extends BasePersistenceImpl<AssetTag> implements AssetTagPersistence {
+	extends BasePersistenceImpl<AssetTag, NoSuchTagException>
+	implements AssetTagPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -2868,48 +2869,6 @@ public class AssetTagPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all asset tags.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(AssetTagImpl.class);
-
-		FinderCacheUtil.clearCache(AssetTagImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the asset tag.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(AssetTag assetTag) {
-		EntityCacheUtil.removeResult(AssetTagImpl.class, assetTag);
-	}
-
-	@Override
-	public void clearCache(List<AssetTag> assetTags) {
-		for (AssetTag assetTag : assetTags) {
-			EntityCacheUtil.removeResult(AssetTagImpl.class, assetTag);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(AssetTagImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(AssetTagImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		AssetTagModelImpl assetTagModelImpl) {
 
@@ -2966,45 +2925,6 @@ public class AssetTagPersistenceImpl
 	@Override
 	public AssetTag remove(long tagId) throws NoSuchTagException {
 		return remove((Serializable)tagId);
-	}
-
-	/**
-	 * Removes the asset tag with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the asset tag
-	 * @return the asset tag that was removed
-	 * @throws NoSuchTagException if a asset tag with the primary key could not be found
-	 */
-	@Override
-	public AssetTag remove(Serializable primaryKey) throws NoSuchTagException {
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			AssetTag assetTag = (AssetTag)session.get(
-				AssetTagImpl.class, primaryKey);
-
-			if (assetTag == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchTagException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(assetTag);
-		}
-		catch (NoSuchTagException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -3192,31 +3112,6 @@ public class AssetTagPersistenceImpl
 	}
 
 	/**
-	 * Returns the asset tag with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the asset tag
-	 * @return the asset tag
-	 * @throws NoSuchTagException if a asset tag with the primary key could not be found
-	 */
-	@Override
-	public AssetTag findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchTagException {
-
-		AssetTag assetTag = fetchByPrimaryKey(primaryKey);
-
-		if (assetTag == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchTagException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return assetTag;
-	}
-
-	/**
 	 * Returns the asset tag with the primary key or throws a <code>NoSuchTagException</code> if it could not be found.
 	 *
 	 * @param tagId the primary key of the asset tag
@@ -3228,51 +3123,9 @@ public class AssetTagPersistenceImpl
 		return findByPrimaryKey((Serializable)tagId);
 	}
 
-	/**
-	 * Returns the asset tag with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the asset tag
-	 * @return the asset tag, or <code>null</code> if a asset tag with the primary key could not be found
-	 */
 	@Override
-	public AssetTag fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				AssetTag.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		AssetTag assetTag = (AssetTag)EntityCacheUtil.getResult(
-			AssetTagImpl.class, primaryKey);
-
-		if (assetTag != null) {
-			return assetTag;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			assetTag = (AssetTag)session.get(AssetTagImpl.class, primaryKey);
-
-			if (assetTag != null) {
-				cacheResult(assetTag);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return assetTag;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -3284,128 +3137,6 @@ public class AssetTagPersistenceImpl
 	@Override
 	public AssetTag fetchByPrimaryKey(long tagId) {
 		return fetchByPrimaryKey((Serializable)tagId);
-	}
-
-	@Override
-	public Map<Serializable, AssetTag> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(AssetTag.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, AssetTag> map = new HashMap<Serializable, AssetTag>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			AssetTag assetTag = fetchByPrimaryKey(primaryKey);
-
-			if (assetTag != null) {
-				map.put(primaryKey, assetTag);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						AssetTag.class, primaryKey)) {
-
-				AssetTag assetTag = (AssetTag)EntityCacheUtil.getResult(
-					AssetTagImpl.class, primaryKey);
-
-				if (assetTag == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, assetTag);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (AssetTag assetTag : (List<AssetTag>)query.list()) {
-				map.put(assetTag.getPrimaryKeyObj(), assetTag);
-
-				cacheResult(assetTag);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -4242,9 +3973,6 @@ public class AssetTagPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "assetTag.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No AssetTag exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No AssetTag exists with the key {";
 
@@ -4260,4 +3988,4 @@ public class AssetTagPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-108204796
+// LIFERAY-SERVICE-BUILDER-HASH:884990440

@@ -66,7 +66,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -91,7 +90,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = DDMTemplatePersistence.class)
 public class DDMTemplatePersistenceImpl
-	extends BasePersistenceImpl<DDMTemplate> implements DDMTemplatePersistence {
+	extends BasePersistenceImpl<DDMTemplate, NoSuchTemplateException>
+	implements DDMTemplatePersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -5689,48 +5689,6 @@ public class DDMTemplatePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all ddm templates.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(DDMTemplateImpl.class);
-
-		finderCache.clearCache(DDMTemplateImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the ddm template.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DDMTemplate ddmTemplate) {
-		entityCache.removeResult(DDMTemplateImpl.class, ddmTemplate);
-	}
-
-	@Override
-	public void clearCache(List<DDMTemplate> ddmTemplates) {
-		for (DDMTemplate ddmTemplate : ddmTemplates) {
-			entityCache.removeResult(DDMTemplateImpl.class, ddmTemplate);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(DDMTemplateImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(DDMTemplateImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DDMTemplateModelImpl ddmTemplateModelImpl) {
 
@@ -5802,47 +5760,6 @@ public class DDMTemplatePersistenceImpl
 	@Override
 	public DDMTemplate remove(long templateId) throws NoSuchTemplateException {
 		return remove((Serializable)templateId);
-	}
-
-	/**
-	 * Removes the ddm template with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the ddm template
-	 * @return the ddm template that was removed
-	 * @throws NoSuchTemplateException if a ddm template with the primary key could not be found
-	 */
-	@Override
-	public DDMTemplate remove(Serializable primaryKey)
-		throws NoSuchTemplateException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DDMTemplate ddmTemplate = (DDMTemplate)session.get(
-				DDMTemplateImpl.class, primaryKey);
-
-			if (ddmTemplate == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchTemplateException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(ddmTemplate);
-		}
-		catch (NoSuchTemplateException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -6031,31 +5948,6 @@ public class DDMTemplatePersistenceImpl
 	}
 
 	/**
-	 * Returns the ddm template with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm template
-	 * @return the ddm template
-	 * @throws NoSuchTemplateException if a ddm template with the primary key could not be found
-	 */
-	@Override
-	public DDMTemplate findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchTemplateException {
-
-		DDMTemplate ddmTemplate = fetchByPrimaryKey(primaryKey);
-
-		if (ddmTemplate == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchTemplateException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return ddmTemplate;
-	}
-
-	/**
 	 * Returns the ddm template with the primary key or throws a <code>NoSuchTemplateException</code> if it could not be found.
 	 *
 	 * @param templateId the primary key of the ddm template
@@ -6069,52 +5961,9 @@ public class DDMTemplatePersistenceImpl
 		return findByPrimaryKey((Serializable)templateId);
 	}
 
-	/**
-	 * Returns the ddm template with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm template
-	 * @return the ddm template, or <code>null</code> if a ddm template with the primary key could not be found
-	 */
 	@Override
-	public DDMTemplate fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				DDMTemplate.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DDMTemplate ddmTemplate = (DDMTemplate)entityCache.getResult(
-			DDMTemplateImpl.class, primaryKey);
-
-		if (ddmTemplate != null) {
-			return ddmTemplate;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ddmTemplate = (DDMTemplate)session.get(
-				DDMTemplateImpl.class, primaryKey);
-
-			if (ddmTemplate != null) {
-				cacheResult(ddmTemplate);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return ddmTemplate;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -6126,129 +5975,6 @@ public class DDMTemplatePersistenceImpl
 	@Override
 	public DDMTemplate fetchByPrimaryKey(long templateId) {
 		return fetchByPrimaryKey((Serializable)templateId);
-	}
-
-	@Override
-	public Map<Serializable, DDMTemplate> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(DDMTemplate.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DDMTemplate> map =
-			new HashMap<Serializable, DDMTemplate>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DDMTemplate ddmTemplate = fetchByPrimaryKey(primaryKey);
-
-			if (ddmTemplate != null) {
-				map.put(primaryKey, ddmTemplate);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						DDMTemplate.class, primaryKey)) {
-
-				DDMTemplate ddmTemplate = (DDMTemplate)entityCache.getResult(
-					DDMTemplateImpl.class, primaryKey);
-
-				if (ddmTemplate == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, ddmTemplate);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DDMTemplate ddmTemplate : (List<DDMTemplate>)query.list()) {
-				map.put(ddmTemplate.getPrimaryKeyObj(), ddmTemplate);
-
-				cacheResult(ddmTemplate);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -7146,9 +6872,6 @@ public class DDMTemplatePersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "DDMTemplate.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DDMTemplate exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DDMTemplate exists with the key {";
 
@@ -7164,4 +6887,4 @@ public class DDMTemplatePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1906488061
+// LIFERAY-SERVICE-BUILDER-HASH:-2127291585

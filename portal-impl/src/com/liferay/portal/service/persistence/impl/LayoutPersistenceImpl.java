@@ -36,6 +36,7 @@ import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.persistence.LayoutPersistence;
 import com.liferay.portal.kernel.service.persistence.LayoutUtil;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -65,7 +66,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -82,7 +82,8 @@ import java.util.Set;
  * @generated
  */
 public class LayoutPersistenceImpl
-	extends BasePersistenceImpl<Layout> implements LayoutPersistence {
+	extends BasePersistenceImpl<Layout, NoSuchLayoutException>
+	implements LayoutPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -13094,48 +13095,6 @@ public class LayoutPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all layouts.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(LayoutImpl.class);
-
-		FinderCacheUtil.clearCache(LayoutImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the layout.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(Layout layout) {
-		EntityCacheUtil.removeResult(LayoutImpl.class, layout);
-	}
-
-	@Override
-	public void clearCache(List<Layout> layouts) {
-		for (Layout layout : layouts) {
-			EntityCacheUtil.removeResult(LayoutImpl.class, layout);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(LayoutImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(LayoutImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(LayoutModelImpl layoutModelImpl) {
 		try (SafeCloseable safeCloseable =
 				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
@@ -13207,44 +13166,6 @@ public class LayoutPersistenceImpl
 	@Override
 	public Layout remove(long plid) throws NoSuchLayoutException {
 		return remove((Serializable)plid);
-	}
-
-	/**
-	 * Removes the layout with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the layout
-	 * @return the layout that was removed
-	 * @throws NoSuchLayoutException if a layout with the primary key could not be found
-	 */
-	@Override
-	public Layout remove(Serializable primaryKey) throws NoSuchLayoutException {
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Layout layout = (Layout)session.get(LayoutImpl.class, primaryKey);
-
-			if (layout == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchLayoutException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(layout);
-		}
-		catch (NoSuchLayoutException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -13426,31 +13347,6 @@ public class LayoutPersistenceImpl
 	}
 
 	/**
-	 * Returns the layout with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the layout
-	 * @return the layout
-	 * @throws NoSuchLayoutException if a layout with the primary key could not be found
-	 */
-	@Override
-	public Layout findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchLayoutException {
-
-		Layout layout = fetchByPrimaryKey(primaryKey);
-
-		if (layout == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchLayoutException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return layout;
-	}
-
-	/**
 	 * Returns the layout with the primary key or throws a <code>NoSuchLayoutException</code> if it could not be found.
 	 *
 	 * @param plid the primary key of the layout
@@ -13462,51 +13358,9 @@ public class LayoutPersistenceImpl
 		return findByPrimaryKey((Serializable)plid);
 	}
 
-	/**
-	 * Returns the layout with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the layout
-	 * @return the layout, or <code>null</code> if a layout with the primary key could not be found
-	 */
 	@Override
-	public Layout fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				Layout.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		Layout layout = (Layout)EntityCacheUtil.getResult(
-			LayoutImpl.class, primaryKey);
-
-		if (layout != null) {
-			return layout;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			layout = (Layout)session.get(LayoutImpl.class, primaryKey);
-
-			if (layout != null) {
-				cacheResult(layout);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return layout;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -13518,128 +13372,6 @@ public class LayoutPersistenceImpl
 	@Override
 	public Layout fetchByPrimaryKey(long plid) {
 		return fetchByPrimaryKey((Serializable)plid);
-	}
-
-	@Override
-	public Map<Serializable, Layout> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(Layout.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, Layout> map = new HashMap<Serializable, Layout>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			Layout layout = fetchByPrimaryKey(primaryKey);
-
-			if (layout != null) {
-				map.put(primaryKey, layout);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						Layout.class, primaryKey)) {
-
-				Layout layout = (Layout)EntityCacheUtil.getResult(
-					LayoutImpl.class, primaryKey);
-
-				if (layout == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, layout);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (Layout layout : (List<Layout>)query.list()) {
-				map.put(layout.getPrimaryKeyObj(), layout);
-
-				cacheResult(layout);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -14734,9 +14466,6 @@ public class LayoutPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "Layout.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No Layout exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No Layout exists with the key {";
 
@@ -14758,4 +14487,4 @@ public class LayoutPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-455670070
+// LIFERAY-SERVICE-BUILDER-HASH:-422837520

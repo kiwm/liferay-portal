@@ -33,6 +33,7 @@ import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.persistence.PhonePersistence;
 import com.liferay.portal.kernel.service.persistence.PhoneUtil;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -60,7 +61,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -77,7 +77,8 @@ import java.util.Set;
  * @generated
  */
 public class PhonePersistenceImpl
-	extends BasePersistenceImpl<Phone> implements PhonePersistence {
+	extends BasePersistenceImpl<Phone, NoSuchPhoneException>
+	implements PhonePersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -1442,48 +1443,6 @@ public class PhonePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all phones.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(PhoneImpl.class);
-
-		FinderCacheUtil.clearCache(PhoneImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the phone.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(Phone phone) {
-		EntityCacheUtil.removeResult(PhoneImpl.class, phone);
-	}
-
-	@Override
-	public void clearCache(List<Phone> phones) {
-		for (Phone phone : phones) {
-			EntityCacheUtil.removeResult(PhoneImpl.class, phone);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(PhoneImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(PhoneImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(PhoneModelImpl phoneModelImpl) {
 		try (SafeCloseable safeCloseable =
 				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
@@ -1531,44 +1490,6 @@ public class PhonePersistenceImpl
 	@Override
 	public Phone remove(long phoneId) throws NoSuchPhoneException {
 		return remove((Serializable)phoneId);
-	}
-
-	/**
-	 * Removes the phone with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the phone
-	 * @return the phone that was removed
-	 * @throws NoSuchPhoneException if a phone with the primary key could not be found
-	 */
-	@Override
-	public Phone remove(Serializable primaryKey) throws NoSuchPhoneException {
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Phone phone = (Phone)session.get(PhoneImpl.class, primaryKey);
-
-			if (phone == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchPhoneException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(phone);
-		}
-		catch (NoSuchPhoneException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1749,31 +1670,6 @@ public class PhonePersistenceImpl
 	}
 
 	/**
-	 * Returns the phone with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the phone
-	 * @return the phone
-	 * @throws NoSuchPhoneException if a phone with the primary key could not be found
-	 */
-	@Override
-	public Phone findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchPhoneException {
-
-		Phone phone = fetchByPrimaryKey(primaryKey);
-
-		if (phone == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchPhoneException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return phone;
-	}
-
-	/**
 	 * Returns the phone with the primary key or throws a <code>NoSuchPhoneException</code> if it could not be found.
 	 *
 	 * @param phoneId the primary key of the phone
@@ -1785,49 +1681,9 @@ public class PhonePersistenceImpl
 		return findByPrimaryKey((Serializable)phoneId);
 	}
 
-	/**
-	 * Returns the phone with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the phone
-	 * @return the phone, or <code>null</code> if a phone with the primary key could not be found
-	 */
 	@Override
-	public Phone fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(Phone.class, primaryKey)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		Phone phone = (Phone)EntityCacheUtil.getResult(
-			PhoneImpl.class, primaryKey);
-
-		if (phone != null) {
-			return phone;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			phone = (Phone)session.get(PhoneImpl.class, primaryKey);
-
-			if (phone != null) {
-				cacheResult(phone);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return phone;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -1839,128 +1695,6 @@ public class PhonePersistenceImpl
 	@Override
 	public Phone fetchByPrimaryKey(long phoneId) {
 		return fetchByPrimaryKey((Serializable)phoneId);
-	}
-
-	@Override
-	public Map<Serializable, Phone> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(Phone.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, Phone> map = new HashMap<Serializable, Phone>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			Phone phone = fetchByPrimaryKey(primaryKey);
-
-			if (phone != null) {
-				map.put(primaryKey, phone);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						Phone.class, primaryKey)) {
-
-				Phone phone = (Phone)EntityCacheUtil.getResult(
-					PhoneImpl.class, primaryKey);
-
-				if (phone == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, phone);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (Phone phone : (List<Phone>)query.list()) {
-				map.put(phone.getPrimaryKeyObj(), phone);
-
-				cacheResult(phone);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2535,9 +2269,6 @@ public class PhonePersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "phone.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No Phone exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No Phone exists with the key {";
 
@@ -2553,4 +2284,4 @@ public class PhonePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1883235926
+// LIFERAY-SERVICE-BUILDER-HASH:-595952414

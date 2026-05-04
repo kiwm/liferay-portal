@@ -27,6 +27,7 @@ import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.persistence.RepositoryEntryPersistence;
 import com.liferay.portal.kernel.service.persistence.RepositoryEntryUtil;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -53,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -69,7 +69,7 @@ import java.util.Set;
  * @generated
  */
 public class RepositoryEntryPersistenceImpl
-	extends BasePersistenceImpl<RepositoryEntry>
+	extends BasePersistenceImpl<RepositoryEntry, NoSuchRepositoryEntryException>
 	implements RepositoryEntryPersistence {
 
 	/*
@@ -846,50 +846,6 @@ public class RepositoryEntryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all repository entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(RepositoryEntryImpl.class);
-
-		FinderCacheUtil.clearCache(RepositoryEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the repository entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(RepositoryEntry repositoryEntry) {
-		EntityCacheUtil.removeResult(
-			RepositoryEntryImpl.class, repositoryEntry);
-	}
-
-	@Override
-	public void clearCache(List<RepositoryEntry> repositoryEntries) {
-		for (RepositoryEntry repositoryEntry : repositoryEntries) {
-			EntityCacheUtil.removeResult(
-				RepositoryEntryImpl.class, repositoryEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(RepositoryEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(RepositoryEntryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		RepositoryEntryModelImpl repositoryEntryModelImpl) {
 
@@ -949,47 +905,6 @@ public class RepositoryEntryPersistenceImpl
 		throws NoSuchRepositoryEntryException {
 
 		return remove((Serializable)repositoryEntryId);
-	}
-
-	/**
-	 * Removes the repository entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the repository entry
-	 * @return the repository entry that was removed
-	 * @throws NoSuchRepositoryEntryException if a repository entry with the primary key could not be found
-	 */
-	@Override
-	public RepositoryEntry remove(Serializable primaryKey)
-		throws NoSuchRepositoryEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			RepositoryEntry repositoryEntry = (RepositoryEntry)session.get(
-				RepositoryEntryImpl.class, primaryKey);
-
-			if (repositoryEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchRepositoryEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(repositoryEntry);
-		}
-		catch (NoSuchRepositoryEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1121,31 +1036,6 @@ public class RepositoryEntryPersistenceImpl
 	}
 
 	/**
-	 * Returns the repository entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the repository entry
-	 * @return the repository entry
-	 * @throws NoSuchRepositoryEntryException if a repository entry with the primary key could not be found
-	 */
-	@Override
-	public RepositoryEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchRepositoryEntryException {
-
-		RepositoryEntry repositoryEntry = fetchByPrimaryKey(primaryKey);
-
-		if (repositoryEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchRepositoryEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return repositoryEntry;
-	}
-
-	/**
 	 * Returns the repository entry with the primary key or throws a <code>NoSuchRepositoryEntryException</code> if it could not be found.
 	 *
 	 * @param repositoryEntryId the primary key of the repository entry
@@ -1159,53 +1049,9 @@ public class RepositoryEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)repositoryEntryId);
 	}
 
-	/**
-	 * Returns the repository entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the repository entry
-	 * @return the repository entry, or <code>null</code> if a repository entry with the primary key could not be found
-	 */
 	@Override
-	public RepositoryEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				RepositoryEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		RepositoryEntry repositoryEntry =
-			(RepositoryEntry)EntityCacheUtil.getResult(
-				RepositoryEntryImpl.class, primaryKey);
-
-		if (repositoryEntry != null) {
-			return repositoryEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			repositoryEntry = (RepositoryEntry)session.get(
-				RepositoryEntryImpl.class, primaryKey);
-
-			if (repositoryEntry != null) {
-				cacheResult(repositoryEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return repositoryEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -1217,132 +1063,6 @@ public class RepositoryEntryPersistenceImpl
 	@Override
 	public RepositoryEntry fetchByPrimaryKey(long repositoryEntryId) {
 		return fetchByPrimaryKey((Serializable)repositoryEntryId);
-	}
-
-	@Override
-	public Map<Serializable, RepositoryEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(RepositoryEntry.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, RepositoryEntry> map =
-			new HashMap<Serializable, RepositoryEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			RepositoryEntry repositoryEntry = fetchByPrimaryKey(primaryKey);
-
-			if (repositoryEntry != null) {
-				map.put(primaryKey, repositoryEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						RepositoryEntry.class, primaryKey)) {
-
-				RepositoryEntry repositoryEntry =
-					(RepositoryEntry)EntityCacheUtil.getResult(
-						RepositoryEntryImpl.class, primaryKey);
-
-				if (repositoryEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, repositoryEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (RepositoryEntry repositoryEntry :
-					(List<RepositoryEntry>)query.list()) {
-
-				map.put(repositoryEntry.getPrimaryKeyObj(), repositoryEntry);
-
-				cacheResult(repositoryEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1789,9 +1509,6 @@ public class RepositoryEntryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "repositoryEntry.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No RepositoryEntry exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No RepositoryEntry exists with the key {";
 
@@ -1807,4 +1524,4 @@ public class RepositoryEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:2002328252
+// LIFERAY-SERVICE-BUILDER-HASH:-664734925

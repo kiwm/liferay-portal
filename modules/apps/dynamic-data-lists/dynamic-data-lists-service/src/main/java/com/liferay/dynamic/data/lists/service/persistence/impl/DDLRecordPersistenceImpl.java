@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = DDLRecordPersistence.class)
 public class DDLRecordPersistenceImpl
-	extends BasePersistenceImpl<DDLRecord> implements DDLRecordPersistence {
+	extends BasePersistenceImpl<DDLRecord, NoSuchRecordException>
+	implements DDLRecordPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -1394,48 +1394,6 @@ public class DDLRecordPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all ddl records.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(DDLRecordImpl.class);
-
-		finderCache.clearCache(DDLRecordImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the ddl record.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DDLRecord ddlRecord) {
-		entityCache.removeResult(DDLRecordImpl.class, ddlRecord);
-	}
-
-	@Override
-	public void clearCache(List<DDLRecord> ddlRecords) {
-		for (DDLRecord ddlRecord : ddlRecords) {
-			entityCache.removeResult(DDLRecordImpl.class, ddlRecord);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(DDLRecordImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(DDLRecordImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DDLRecordModelImpl ddlRecordModelImpl) {
 
@@ -1484,47 +1442,6 @@ public class DDLRecordPersistenceImpl
 	@Override
 	public DDLRecord remove(long recordId) throws NoSuchRecordException {
 		return remove((Serializable)recordId);
-	}
-
-	/**
-	 * Removes the ddl record with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the ddl record
-	 * @return the ddl record that was removed
-	 * @throws NoSuchRecordException if a ddl record with the primary key could not be found
-	 */
-	@Override
-	public DDLRecord remove(Serializable primaryKey)
-		throws NoSuchRecordException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DDLRecord ddlRecord = (DDLRecord)session.get(
-				DDLRecordImpl.class, primaryKey);
-
-			if (ddlRecord == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchRecordException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(ddlRecord);
-		}
-		catch (NoSuchRecordException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1649,31 +1566,6 @@ public class DDLRecordPersistenceImpl
 	}
 
 	/**
-	 * Returns the ddl record with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddl record
-	 * @return the ddl record
-	 * @throws NoSuchRecordException if a ddl record with the primary key could not be found
-	 */
-	@Override
-	public DDLRecord findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchRecordException {
-
-		DDLRecord ddlRecord = fetchByPrimaryKey(primaryKey);
-
-		if (ddlRecord == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchRecordException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return ddlRecord;
-	}
-
-	/**
 	 * Returns the ddl record with the primary key or throws a <code>NoSuchRecordException</code> if it could not be found.
 	 *
 	 * @param recordId the primary key of the ddl record
@@ -1687,49 +1579,9 @@ public class DDLRecordPersistenceImpl
 		return findByPrimaryKey((Serializable)recordId);
 	}
 
-	/**
-	 * Returns the ddl record with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddl record
-	 * @return the ddl record, or <code>null</code> if a ddl record with the primary key could not be found
-	 */
 	@Override
-	public DDLRecord fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(DDLRecord.class, primaryKey)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DDLRecord ddlRecord = (DDLRecord)entityCache.getResult(
-			DDLRecordImpl.class, primaryKey);
-
-		if (ddlRecord != null) {
-			return ddlRecord;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ddlRecord = (DDLRecord)session.get(DDLRecordImpl.class, primaryKey);
-
-			if (ddlRecord != null) {
-				cacheResult(ddlRecord);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return ddlRecord;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1741,129 +1593,6 @@ public class DDLRecordPersistenceImpl
 	@Override
 	public DDLRecord fetchByPrimaryKey(long recordId) {
 		return fetchByPrimaryKey((Serializable)recordId);
-	}
-
-	@Override
-	public Map<Serializable, DDLRecord> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(DDLRecord.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DDLRecord> map =
-			new HashMap<Serializable, DDLRecord>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DDLRecord ddlRecord = fetchByPrimaryKey(primaryKey);
-
-			if (ddlRecord != null) {
-				map.put(primaryKey, ddlRecord);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						DDLRecord.class, primaryKey)) {
-
-				DDLRecord ddlRecord = (DDLRecord)entityCache.getResult(
-					DDLRecordImpl.class, primaryKey);
-
-				if (ddlRecord == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, ddlRecord);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DDLRecord ddlRecord : (List<DDLRecord>)query.list()) {
-				map.put(ddlRecord.getPrimaryKeyObj(), ddlRecord);
-
-				cacheResult(ddlRecord);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2454,9 +2183,6 @@ public class DDLRecordPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "ddlRecord.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DDLRecord exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DDLRecord exists with the key {";
 
@@ -2472,4 +2198,4 @@ public class DDLRecordPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:812667170
+// LIFERAY-SERVICE-BUILDER-HASH:92579974

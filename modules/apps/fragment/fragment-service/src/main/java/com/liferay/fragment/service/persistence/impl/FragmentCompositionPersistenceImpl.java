@@ -61,7 +61,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -86,7 +85,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = FragmentCompositionPersistence.class)
 public class FragmentCompositionPersistenceImpl
-	extends BasePersistenceImpl<FragmentComposition>
+	extends BasePersistenceImpl<FragmentComposition, NoSuchCompositionException>
 	implements FragmentCompositionPersistence {
 
 	/*
@@ -1891,50 +1890,6 @@ public class FragmentCompositionPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all fragment compositions.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(FragmentCompositionImpl.class);
-
-		finderCache.clearCache(FragmentCompositionImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the fragment composition.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(FragmentComposition fragmentComposition) {
-		entityCache.removeResult(
-			FragmentCompositionImpl.class, fragmentComposition);
-	}
-
-	@Override
-	public void clearCache(List<FragmentComposition> fragmentCompositions) {
-		for (FragmentComposition fragmentComposition : fragmentCompositions) {
-			entityCache.removeResult(
-				FragmentCompositionImpl.class, fragmentComposition);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(FragmentCompositionImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(FragmentCompositionImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		FragmentCompositionModelImpl fragmentCompositionModelImpl) {
 
@@ -2002,48 +1957,6 @@ public class FragmentCompositionPersistenceImpl
 		throws NoSuchCompositionException {
 
 		return remove((Serializable)fragmentCompositionId);
-	}
-
-	/**
-	 * Removes the fragment composition with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the fragment composition
-	 * @return the fragment composition that was removed
-	 * @throws NoSuchCompositionException if a fragment composition with the primary key could not be found
-	 */
-	@Override
-	public FragmentComposition remove(Serializable primaryKey)
-		throws NoSuchCompositionException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			FragmentComposition fragmentComposition =
-				(FragmentComposition)session.get(
-					FragmentCompositionImpl.class, primaryKey);
-
-			if (fragmentComposition == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCompositionException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(fragmentComposition);
-		}
-		catch (NoSuchCompositionException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -2246,31 +2159,6 @@ public class FragmentCompositionPersistenceImpl
 	}
 
 	/**
-	 * Returns the fragment composition with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the fragment composition
-	 * @return the fragment composition
-	 * @throws NoSuchCompositionException if a fragment composition with the primary key could not be found
-	 */
-	@Override
-	public FragmentComposition findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCompositionException {
-
-		FragmentComposition fragmentComposition = fetchByPrimaryKey(primaryKey);
-
-		if (fragmentComposition == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCompositionException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return fragmentComposition;
-	}
-
-	/**
 	 * Returns the fragment composition with the primary key or throws a <code>NoSuchCompositionException</code> if it could not be found.
 	 *
 	 * @param fragmentCompositionId the primary key of the fragment composition
@@ -2284,53 +2172,9 @@ public class FragmentCompositionPersistenceImpl
 		return findByPrimaryKey((Serializable)fragmentCompositionId);
 	}
 
-	/**
-	 * Returns the fragment composition with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the fragment composition
-	 * @return the fragment composition, or <code>null</code> if a fragment composition with the primary key could not be found
-	 */
 	@Override
-	public FragmentComposition fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				FragmentComposition.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		FragmentComposition fragmentComposition =
-			(FragmentComposition)entityCache.getResult(
-				FragmentCompositionImpl.class, primaryKey);
-
-		if (fragmentComposition != null) {
-			return fragmentComposition;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			fragmentComposition = (FragmentComposition)session.get(
-				FragmentCompositionImpl.class, primaryKey);
-
-			if (fragmentComposition != null) {
-				cacheResult(fragmentComposition);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return fragmentComposition;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -2342,135 +2186,6 @@ public class FragmentCompositionPersistenceImpl
 	@Override
 	public FragmentComposition fetchByPrimaryKey(long fragmentCompositionId) {
 		return fetchByPrimaryKey((Serializable)fragmentCompositionId);
-	}
-
-	@Override
-	public Map<Serializable, FragmentComposition> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(FragmentComposition.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, FragmentComposition> map =
-			new HashMap<Serializable, FragmentComposition>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			FragmentComposition fragmentComposition = fetchByPrimaryKey(
-				primaryKey);
-
-			if (fragmentComposition != null) {
-				map.put(primaryKey, fragmentComposition);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						FragmentComposition.class, primaryKey)) {
-
-				FragmentComposition fragmentComposition =
-					(FragmentComposition)entityCache.getResult(
-						FragmentCompositionImpl.class, primaryKey);
-
-				if (fragmentComposition == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, fragmentComposition);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (FragmentComposition fragmentComposition :
-					(List<FragmentComposition>)query.list()) {
-
-				map.put(
-					fragmentComposition.getPrimaryKeyObj(),
-					fragmentComposition);
-
-				cacheResult(fragmentComposition);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -3179,9 +2894,6 @@ public class FragmentCompositionPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "fragmentComposition.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No FragmentComposition exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No FragmentComposition exists with the key {";
 
@@ -3197,4 +2909,4 @@ public class FragmentCompositionPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1634446954
+// LIFERAY-SERVICE-BUILDER-HASH:1893393749

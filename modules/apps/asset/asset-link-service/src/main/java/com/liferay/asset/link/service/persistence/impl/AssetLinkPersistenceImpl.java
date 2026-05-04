@@ -52,7 +52,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -76,7 +75,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = AssetLinkPersistence.class)
 public class AssetLinkPersistenceImpl
-	extends BasePersistenceImpl<AssetLink> implements AssetLinkPersistence {
+	extends BasePersistenceImpl<AssetLink, NoSuchLinkException>
+	implements AssetLinkPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -1073,48 +1073,6 @@ public class AssetLinkPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all asset links.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(AssetLinkImpl.class);
-
-		finderCache.clearCache(AssetLinkImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the asset link.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(AssetLink assetLink) {
-		entityCache.removeResult(AssetLinkImpl.class, assetLink);
-	}
-
-	@Override
-	public void clearCache(List<AssetLink> assetLinks) {
-		for (AssetLink assetLink : assetLinks) {
-			entityCache.removeResult(AssetLinkImpl.class, assetLink);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(AssetLinkImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(AssetLinkImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		AssetLinkModelImpl assetLinkModelImpl) {
 
@@ -1160,47 +1118,6 @@ public class AssetLinkPersistenceImpl
 	@Override
 	public AssetLink remove(long linkId) throws NoSuchLinkException {
 		return remove((Serializable)linkId);
-	}
-
-	/**
-	 * Removes the asset link with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the asset link
-	 * @return the asset link that was removed
-	 * @throws NoSuchLinkException if a asset link with the primary key could not be found
-	 */
-	@Override
-	public AssetLink remove(Serializable primaryKey)
-		throws NoSuchLinkException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			AssetLink assetLink = (AssetLink)session.get(
-				AssetLinkImpl.class, primaryKey);
-
-			if (assetLink == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchLinkException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(assetLink);
-		}
-		catch (NoSuchLinkException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1310,31 +1227,6 @@ public class AssetLinkPersistenceImpl
 	}
 
 	/**
-	 * Returns the asset link with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the asset link
-	 * @return the asset link
-	 * @throws NoSuchLinkException if a asset link with the primary key could not be found
-	 */
-	@Override
-	public AssetLink findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchLinkException {
-
-		AssetLink assetLink = fetchByPrimaryKey(primaryKey);
-
-		if (assetLink == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchLinkException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return assetLink;
-	}
-
-	/**
 	 * Returns the asset link with the primary key or throws a <code>NoSuchLinkException</code> if it could not be found.
 	 *
 	 * @param linkId the primary key of the asset link
@@ -1346,49 +1238,9 @@ public class AssetLinkPersistenceImpl
 		return findByPrimaryKey((Serializable)linkId);
 	}
 
-	/**
-	 * Returns the asset link with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the asset link
-	 * @return the asset link, or <code>null</code> if a asset link with the primary key could not be found
-	 */
 	@Override
-	public AssetLink fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(AssetLink.class, primaryKey)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		AssetLink assetLink = (AssetLink)entityCache.getResult(
-			AssetLinkImpl.class, primaryKey);
-
-		if (assetLink != null) {
-			return assetLink;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			assetLink = (AssetLink)session.get(AssetLinkImpl.class, primaryKey);
-
-			if (assetLink != null) {
-				cacheResult(assetLink);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return assetLink;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1400,129 +1252,6 @@ public class AssetLinkPersistenceImpl
 	@Override
 	public AssetLink fetchByPrimaryKey(long linkId) {
 		return fetchByPrimaryKey((Serializable)linkId);
-	}
-
-	@Override
-	public Map<Serializable, AssetLink> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(AssetLink.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, AssetLink> map =
-			new HashMap<Serializable, AssetLink>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			AssetLink assetLink = fetchByPrimaryKey(primaryKey);
-
-			if (assetLink != null) {
-				map.put(primaryKey, assetLink);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						AssetLink.class, primaryKey)) {
-
-				AssetLink assetLink = (AssetLink)entityCache.getResult(
-					AssetLinkImpl.class, primaryKey);
-
-				if (assetLink == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, assetLink);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (AssetLink assetLink : (List<AssetLink>)query.list()) {
-				map.put(assetLink.getPrimaryKeyObj(), assetLink);
-
-				cacheResult(assetLink);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2048,9 +1777,6 @@ public class AssetLinkPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "assetLink.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No AssetLink exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No AssetLink exists with the key {";
 
@@ -2066,4 +1792,4 @@ public class AssetLinkPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-2118843614
+// LIFERAY-SERVICE-BUILDER-HASH:1599853943

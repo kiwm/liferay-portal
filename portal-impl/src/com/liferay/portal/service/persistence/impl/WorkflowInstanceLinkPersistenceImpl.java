@@ -27,6 +27,7 @@ import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.persistence.WorkflowInstanceLinkPersistence;
 import com.liferay.portal.kernel.service.persistence.WorkflowInstanceLinkUtil;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -48,9 +49,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -66,7 +65,8 @@ import java.util.Set;
  * @generated
  */
 public class WorkflowInstanceLinkPersistenceImpl
-	extends BasePersistenceImpl<WorkflowInstanceLink>
+	extends BasePersistenceImpl
+		<WorkflowInstanceLink, NoSuchWorkflowInstanceLinkException>
 	implements WorkflowInstanceLinkPersistence {
 
 	/*
@@ -808,53 +808,6 @@ public class WorkflowInstanceLinkPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all workflow instance links.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(WorkflowInstanceLinkImpl.class);
-
-		FinderCacheUtil.clearCache(WorkflowInstanceLinkImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the workflow instance link.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(WorkflowInstanceLink workflowInstanceLink) {
-		EntityCacheUtil.removeResult(
-			WorkflowInstanceLinkImpl.class, workflowInstanceLink);
-	}
-
-	@Override
-	public void clearCache(List<WorkflowInstanceLink> workflowInstanceLinks) {
-		for (WorkflowInstanceLink workflowInstanceLink :
-				workflowInstanceLinks) {
-
-			EntityCacheUtil.removeResult(
-				WorkflowInstanceLinkImpl.class, workflowInstanceLink);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(WorkflowInstanceLinkImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(
-				WorkflowInstanceLinkImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		WorkflowInstanceLinkModelImpl workflowInstanceLinkModelImpl) {
 
@@ -903,48 +856,6 @@ public class WorkflowInstanceLinkPersistenceImpl
 		throws NoSuchWorkflowInstanceLinkException {
 
 		return remove((Serializable)workflowInstanceLinkId);
-	}
-
-	/**
-	 * Removes the workflow instance link with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the workflow instance link
-	 * @return the workflow instance link that was removed
-	 * @throws NoSuchWorkflowInstanceLinkException if a workflow instance link with the primary key could not be found
-	 */
-	@Override
-	public WorkflowInstanceLink remove(Serializable primaryKey)
-		throws NoSuchWorkflowInstanceLinkException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			WorkflowInstanceLink workflowInstanceLink =
-				(WorkflowInstanceLink)session.get(
-					WorkflowInstanceLinkImpl.class, primaryKey);
-
-			if (workflowInstanceLink == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchWorkflowInstanceLinkException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(workflowInstanceLink);
-		}
-		catch (NoSuchWorkflowInstanceLinkException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1075,32 +986,6 @@ public class WorkflowInstanceLinkPersistenceImpl
 	}
 
 	/**
-	 * Returns the workflow instance link with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the workflow instance link
-	 * @return the workflow instance link
-	 * @throws NoSuchWorkflowInstanceLinkException if a workflow instance link with the primary key could not be found
-	 */
-	@Override
-	public WorkflowInstanceLink findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchWorkflowInstanceLinkException {
-
-		WorkflowInstanceLink workflowInstanceLink = fetchByPrimaryKey(
-			primaryKey);
-
-		if (workflowInstanceLink == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchWorkflowInstanceLinkException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return workflowInstanceLink;
-	}
-
-	/**
 	 * Returns the workflow instance link with the primary key or throws a <code>NoSuchWorkflowInstanceLinkException</code> if it could not be found.
 	 *
 	 * @param workflowInstanceLinkId the primary key of the workflow instance link
@@ -1114,53 +999,9 @@ public class WorkflowInstanceLinkPersistenceImpl
 		return findByPrimaryKey((Serializable)workflowInstanceLinkId);
 	}
 
-	/**
-	 * Returns the workflow instance link with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the workflow instance link
-	 * @return the workflow instance link, or <code>null</code> if a workflow instance link with the primary key could not be found
-	 */
 	@Override
-	public WorkflowInstanceLink fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				WorkflowInstanceLink.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		WorkflowInstanceLink workflowInstanceLink =
-			(WorkflowInstanceLink)EntityCacheUtil.getResult(
-				WorkflowInstanceLinkImpl.class, primaryKey);
-
-		if (workflowInstanceLink != null) {
-			return workflowInstanceLink;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			workflowInstanceLink = (WorkflowInstanceLink)session.get(
-				WorkflowInstanceLinkImpl.class, primaryKey);
-
-			if (workflowInstanceLink != null) {
-				cacheResult(workflowInstanceLink);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return workflowInstanceLink;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -1172,137 +1013,6 @@ public class WorkflowInstanceLinkPersistenceImpl
 	@Override
 	public WorkflowInstanceLink fetchByPrimaryKey(long workflowInstanceLinkId) {
 		return fetchByPrimaryKey((Serializable)workflowInstanceLinkId);
-	}
-
-	@Override
-	public Map<Serializable, WorkflowInstanceLink> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(
-				WorkflowInstanceLink.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, WorkflowInstanceLink> map =
-			new HashMap<Serializable, WorkflowInstanceLink>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			WorkflowInstanceLink workflowInstanceLink = fetchByPrimaryKey(
-				primaryKey);
-
-			if (workflowInstanceLink != null) {
-				map.put(primaryKey, workflowInstanceLink);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						WorkflowInstanceLink.class, primaryKey)) {
-
-				WorkflowInstanceLink workflowInstanceLink =
-					(WorkflowInstanceLink)EntityCacheUtil.getResult(
-						WorkflowInstanceLinkImpl.class, primaryKey);
-
-				if (workflowInstanceLink == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, workflowInstanceLink);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (WorkflowInstanceLink workflowInstanceLink :
-					(List<WorkflowInstanceLink>)query.list()) {
-
-				map.put(
-					workflowInstanceLink.getPrimaryKeyObj(),
-					workflowInstanceLink);
-
-				cacheResult(workflowInstanceLink);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1762,9 +1472,6 @@ public class WorkflowInstanceLinkPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"workflowInstanceLink.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No WorkflowInstanceLink exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No WorkflowInstanceLink exists with the key {";
 
@@ -1777,4 +1484,4 @@ public class WorkflowInstanceLinkPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:220078228
+// LIFERAY-SERVICE-BUILDER-HASH:566907432

@@ -32,6 +32,7 @@ import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.persistence.CountryLocalizationPersistence;
 import com.liferay.portal.kernel.service.persistence.CountryPersistence;
 import com.liferay.portal.kernel.service.persistence.CountryUtil;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -58,7 +59,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -75,7 +75,8 @@ import java.util.Set;
  * @generated
  */
 public class CountryPersistenceImpl
-	extends BasePersistenceImpl<Country> implements CountryPersistence {
+	extends BasePersistenceImpl<Country, NoSuchCountryException>
+	implements CountryPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -4724,48 +4725,6 @@ public class CountryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all countries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(CountryImpl.class);
-
-		FinderCacheUtil.clearCache(CountryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the country.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(Country country) {
-		EntityCacheUtil.removeResult(CountryImpl.class, country);
-	}
-
-	@Override
-	public void clearCache(List<Country> countries) {
-		for (Country country : countries) {
-			EntityCacheUtil.removeResult(CountryImpl.class, country);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(CountryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(CountryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(CountryModelImpl countryModelImpl) {
 		try (SafeCloseable safeCloseable =
 				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
@@ -4833,47 +4792,6 @@ public class CountryPersistenceImpl
 	@Override
 	public Country remove(long countryId) throws NoSuchCountryException {
 		return remove((Serializable)countryId);
-	}
-
-	/**
-	 * Removes the country with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the country
-	 * @return the country that was removed
-	 * @throws NoSuchCountryException if a country with the primary key could not be found
-	 */
-	@Override
-	public Country remove(Serializable primaryKey)
-		throws NoSuchCountryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Country country = (Country)session.get(
-				CountryImpl.class, primaryKey);
-
-			if (country == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCountryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(country);
-		}
-		catch (NoSuchCountryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -5001,31 +4919,6 @@ public class CountryPersistenceImpl
 	}
 
 	/**
-	 * Returns the country with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the country
-	 * @return the country
-	 * @throws NoSuchCountryException if a country with the primary key could not be found
-	 */
-	@Override
-	public Country findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCountryException {
-
-		Country country = fetchByPrimaryKey(primaryKey);
-
-		if (country == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCountryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return country;
-	}
-
-	/**
 	 * Returns the country with the primary key or throws a <code>NoSuchCountryException</code> if it could not be found.
 	 *
 	 * @param countryId the primary key of the country
@@ -5039,51 +4932,9 @@ public class CountryPersistenceImpl
 		return findByPrimaryKey((Serializable)countryId);
 	}
 
-	/**
-	 * Returns the country with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the country
-	 * @return the country, or <code>null</code> if a country with the primary key could not be found
-	 */
 	@Override
-	public Country fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				Country.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		Country country = (Country)EntityCacheUtil.getResult(
-			CountryImpl.class, primaryKey);
-
-		if (country != null) {
-			return country;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			country = (Country)session.get(CountryImpl.class, primaryKey);
-
-			if (country != null) {
-				cacheResult(country);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return country;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -5095,128 +4946,6 @@ public class CountryPersistenceImpl
 	@Override
 	public Country fetchByPrimaryKey(long countryId) {
 		return fetchByPrimaryKey((Serializable)countryId);
-	}
-
-	@Override
-	public Map<Serializable, Country> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(Country.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, Country> map = new HashMap<Serializable, Country>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			Country country = fetchByPrimaryKey(primaryKey);
-
-			if (country != null) {
-				map.put(primaryKey, country);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						Country.class, primaryKey)) {
-
-				Country country = (Country)EntityCacheUtil.getResult(
-					CountryImpl.class, primaryKey);
-
-				if (country == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, country);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (Country country : (List<Country>)query.list()) {
-				map.put(country.getPrimaryKeyObj(), country);
-
-				cacheResult(country);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -6040,9 +5769,6 @@ public class CountryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "Country.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No Country exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No Country exists with the key {";
 
@@ -6058,4 +5784,4 @@ public class CountryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:670028955
+// LIFERAY-SERVICE-BUILDER-HASH:901011378

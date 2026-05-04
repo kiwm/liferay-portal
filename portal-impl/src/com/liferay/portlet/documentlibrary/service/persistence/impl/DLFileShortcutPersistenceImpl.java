@@ -36,6 +36,7 @@ import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
 import com.liferay.portal.kernel.security.permission.InlineSQLHelperUtil;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -63,7 +64,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -80,7 +80,7 @@ import java.util.Set;
  * @generated
  */
 public class DLFileShortcutPersistenceImpl
-	extends BasePersistenceImpl<DLFileShortcut>
+	extends BasePersistenceImpl<DLFileShortcut, NoSuchFileShortcutException>
 	implements DLFileShortcutPersistence {
 
 	/*
@@ -2811,49 +2811,6 @@ public class DLFileShortcutPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all document library file shortcuts.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(DLFileShortcutImpl.class);
-
-		FinderCacheUtil.clearCache(DLFileShortcutImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the document library file shortcut.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DLFileShortcut dlFileShortcut) {
-		EntityCacheUtil.removeResult(DLFileShortcutImpl.class, dlFileShortcut);
-	}
-
-	@Override
-	public void clearCache(List<DLFileShortcut> dlFileShortcuts) {
-		for (DLFileShortcut dlFileShortcut : dlFileShortcuts) {
-			EntityCacheUtil.removeResult(
-				DLFileShortcutImpl.class, dlFileShortcut);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(DLFileShortcutImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(DLFileShortcutImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DLFileShortcutModelImpl dlFileShortcutModelImpl) {
 
@@ -2913,47 +2870,6 @@ public class DLFileShortcutPersistenceImpl
 		throws NoSuchFileShortcutException {
 
 		return remove((Serializable)fileShortcutId);
-	}
-
-	/**
-	 * Removes the document library file shortcut with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the document library file shortcut
-	 * @return the document library file shortcut that was removed
-	 * @throws NoSuchFileShortcutException if a document library file shortcut with the primary key could not be found
-	 */
-	@Override
-	public DLFileShortcut remove(Serializable primaryKey)
-		throws NoSuchFileShortcutException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DLFileShortcut dlFileShortcut = (DLFileShortcut)session.get(
-				DLFileShortcutImpl.class, primaryKey);
-
-			if (dlFileShortcut == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchFileShortcutException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(dlFileShortcut);
-		}
-		catch (NoSuchFileShortcutException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -3147,31 +3063,6 @@ public class DLFileShortcutPersistenceImpl
 	}
 
 	/**
-	 * Returns the document library file shortcut with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the document library file shortcut
-	 * @return the document library file shortcut
-	 * @throws NoSuchFileShortcutException if a document library file shortcut with the primary key could not be found
-	 */
-	@Override
-	public DLFileShortcut findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchFileShortcutException {
-
-		DLFileShortcut dlFileShortcut = fetchByPrimaryKey(primaryKey);
-
-		if (dlFileShortcut == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchFileShortcutException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return dlFileShortcut;
-	}
-
-	/**
 	 * Returns the document library file shortcut with the primary key or throws a <code>NoSuchFileShortcutException</code> if it could not be found.
 	 *
 	 * @param fileShortcutId the primary key of the document library file shortcut
@@ -3185,53 +3076,9 @@ public class DLFileShortcutPersistenceImpl
 		return findByPrimaryKey((Serializable)fileShortcutId);
 	}
 
-	/**
-	 * Returns the document library file shortcut with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the document library file shortcut
-	 * @return the document library file shortcut, or <code>null</code> if a document library file shortcut with the primary key could not be found
-	 */
 	@Override
-	public DLFileShortcut fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				DLFileShortcut.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DLFileShortcut dlFileShortcut =
-			(DLFileShortcut)EntityCacheUtil.getResult(
-				DLFileShortcutImpl.class, primaryKey);
-
-		if (dlFileShortcut != null) {
-			return dlFileShortcut;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			dlFileShortcut = (DLFileShortcut)session.get(
-				DLFileShortcutImpl.class, primaryKey);
-
-			if (dlFileShortcut != null) {
-				cacheResult(dlFileShortcut);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return dlFileShortcut;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -3243,132 +3090,6 @@ public class DLFileShortcutPersistenceImpl
 	@Override
 	public DLFileShortcut fetchByPrimaryKey(long fileShortcutId) {
 		return fetchByPrimaryKey((Serializable)fileShortcutId);
-	}
-
-	@Override
-	public Map<Serializable, DLFileShortcut> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(DLFileShortcut.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DLFileShortcut> map =
-			new HashMap<Serializable, DLFileShortcut>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DLFileShortcut dlFileShortcut = fetchByPrimaryKey(primaryKey);
-
-			if (dlFileShortcut != null) {
-				map.put(primaryKey, dlFileShortcut);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						DLFileShortcut.class, primaryKey)) {
-
-				DLFileShortcut dlFileShortcut =
-					(DLFileShortcut)EntityCacheUtil.getResult(
-						DLFileShortcutImpl.class, primaryKey);
-
-				if (dlFileShortcut == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, dlFileShortcut);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DLFileShortcut dlFileShortcut :
-					(List<DLFileShortcut>)query.list()) {
-
-				map.put(dlFileShortcut.getPrimaryKeyObj(), dlFileShortcut);
-
-				cacheResult(dlFileShortcut);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -4048,9 +3769,6 @@ public class DLFileShortcutPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "DLFileShortcut.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DLFileShortcut exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DLFileShortcut exists with the key {";
 
@@ -4066,4 +3784,4 @@ public class DLFileShortcutPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1535352841
+// LIFERAY-SERVICE-BUILDER-HASH:829054875

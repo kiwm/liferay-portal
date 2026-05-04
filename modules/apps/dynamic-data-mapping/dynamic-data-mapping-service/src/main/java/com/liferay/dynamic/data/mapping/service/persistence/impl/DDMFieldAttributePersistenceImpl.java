@@ -49,9 +49,7 @@ import java.lang.reflect.InvocationHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -76,7 +74,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = DDMFieldAttributePersistence.class)
 public class DDMFieldAttributePersistenceImpl
-	extends BasePersistenceImpl<DDMFieldAttribute>
+	extends BasePersistenceImpl
+		<DDMFieldAttribute, NoSuchFieldAttributeException>
 	implements DDMFieldAttributePersistence {
 
 	/*
@@ -1462,50 +1461,6 @@ public class DDMFieldAttributePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all ddm field attributes.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(DDMFieldAttributeImpl.class);
-
-		finderCache.clearCache(DDMFieldAttributeImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the ddm field attribute.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DDMFieldAttribute ddmFieldAttribute) {
-		entityCache.removeResult(
-			DDMFieldAttributeImpl.class, ddmFieldAttribute);
-	}
-
-	@Override
-	public void clearCache(List<DDMFieldAttribute> ddmFieldAttributes) {
-		for (DDMFieldAttribute ddmFieldAttribute : ddmFieldAttributes) {
-			entityCache.removeResult(
-				DDMFieldAttributeImpl.class, ddmFieldAttribute);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(DDMFieldAttributeImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(DDMFieldAttributeImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DDMFieldAttributeModelImpl ddmFieldAttributeModelImpl) {
 
@@ -1554,48 +1509,6 @@ public class DDMFieldAttributePersistenceImpl
 		throws NoSuchFieldAttributeException {
 
 		return remove((Serializable)fieldAttributeId);
-	}
-
-	/**
-	 * Removes the ddm field attribute with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the ddm field attribute
-	 * @return the ddm field attribute that was removed
-	 * @throws NoSuchFieldAttributeException if a ddm field attribute with the primary key could not be found
-	 */
-	@Override
-	public DDMFieldAttribute remove(Serializable primaryKey)
-		throws NoSuchFieldAttributeException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DDMFieldAttribute ddmFieldAttribute =
-				(DDMFieldAttribute)session.get(
-					DDMFieldAttributeImpl.class, primaryKey);
-
-			if (ddmFieldAttribute == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchFieldAttributeException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(ddmFieldAttribute);
-		}
-		catch (NoSuchFieldAttributeException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1699,31 +1612,6 @@ public class DDMFieldAttributePersistenceImpl
 	}
 
 	/**
-	 * Returns the ddm field attribute with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm field attribute
-	 * @return the ddm field attribute
-	 * @throws NoSuchFieldAttributeException if a ddm field attribute with the primary key could not be found
-	 */
-	@Override
-	public DDMFieldAttribute findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchFieldAttributeException {
-
-		DDMFieldAttribute ddmFieldAttribute = fetchByPrimaryKey(primaryKey);
-
-		if (ddmFieldAttribute == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchFieldAttributeException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return ddmFieldAttribute;
-	}
-
-	/**
 	 * Returns the ddm field attribute with the primary key or throws a <code>NoSuchFieldAttributeException</code> if it could not be found.
 	 *
 	 * @param fieldAttributeId the primary key of the ddm field attribute
@@ -1737,53 +1625,9 @@ public class DDMFieldAttributePersistenceImpl
 		return findByPrimaryKey((Serializable)fieldAttributeId);
 	}
 
-	/**
-	 * Returns the ddm field attribute with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddm field attribute
-	 * @return the ddm field attribute, or <code>null</code> if a ddm field attribute with the primary key could not be found
-	 */
 	@Override
-	public DDMFieldAttribute fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				DDMFieldAttribute.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DDMFieldAttribute ddmFieldAttribute =
-			(DDMFieldAttribute)entityCache.getResult(
-				DDMFieldAttributeImpl.class, primaryKey);
-
-		if (ddmFieldAttribute != null) {
-			return ddmFieldAttribute;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ddmFieldAttribute = (DDMFieldAttribute)session.get(
-				DDMFieldAttributeImpl.class, primaryKey);
-
-			if (ddmFieldAttribute != null) {
-				cacheResult(ddmFieldAttribute);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return ddmFieldAttribute;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1795,133 +1639,6 @@ public class DDMFieldAttributePersistenceImpl
 	@Override
 	public DDMFieldAttribute fetchByPrimaryKey(long fieldAttributeId) {
 		return fetchByPrimaryKey((Serializable)fieldAttributeId);
-	}
-
-	@Override
-	public Map<Serializable, DDMFieldAttribute> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(DDMFieldAttribute.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DDMFieldAttribute> map =
-			new HashMap<Serializable, DDMFieldAttribute>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DDMFieldAttribute ddmFieldAttribute = fetchByPrimaryKey(primaryKey);
-
-			if (ddmFieldAttribute != null) {
-				map.put(primaryKey, ddmFieldAttribute);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						DDMFieldAttribute.class, primaryKey)) {
-
-				DDMFieldAttribute ddmFieldAttribute =
-					(DDMFieldAttribute)entityCache.getResult(
-						DDMFieldAttributeImpl.class, primaryKey);
-
-				if (ddmFieldAttribute == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, ddmFieldAttribute);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DDMFieldAttribute ddmFieldAttribute :
-					(List<DDMFieldAttribute>)query.list()) {
-
-				map.put(
-					ddmFieldAttribute.getPrimaryKeyObj(), ddmFieldAttribute);
-
-				cacheResult(ddmFieldAttribute);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2417,9 +2134,6 @@ public class DDMFieldAttributePersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "ddmFieldAttribute.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DDMFieldAttribute exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DDMFieldAttribute exists with the key {";
 
@@ -2432,4 +2146,4 @@ public class DDMFieldAttributePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1723644239
+// LIFERAY-SERVICE-BUILDER-HASH:2097683315

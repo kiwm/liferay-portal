@@ -31,6 +31,7 @@ import com.liferay.portal.kernel.sanitizer.SanitizerException;
 import com.liferay.portal.kernel.sanitizer.SanitizerUtil;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -57,7 +58,6 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -74,7 +74,8 @@ import java.util.Set;
  * @generated
  */
 public class DLFileEntryMetadataPersistenceImpl
-	extends BasePersistenceImpl<DLFileEntryMetadata>
+	extends BasePersistenceImpl
+		<DLFileEntryMetadata, NoSuchFileEntryMetadataException>
 	implements DLFileEntryMetadataPersistence {
 
 	/*
@@ -1030,51 +1031,6 @@ public class DLFileEntryMetadataPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all document library file entry metadatas.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(DLFileEntryMetadataImpl.class);
-
-		FinderCacheUtil.clearCache(DLFileEntryMetadataImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the document library file entry metadata.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DLFileEntryMetadata dlFileEntryMetadata) {
-		EntityCacheUtil.removeResult(
-			DLFileEntryMetadataImpl.class, dlFileEntryMetadata);
-	}
-
-	@Override
-	public void clearCache(List<DLFileEntryMetadata> dlFileEntryMetadatas) {
-		for (DLFileEntryMetadata dlFileEntryMetadata : dlFileEntryMetadatas) {
-			EntityCacheUtil.removeResult(
-				DLFileEntryMetadataImpl.class, dlFileEntryMetadata);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(DLFileEntryMetadataImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(
-				DLFileEntryMetadataImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DLFileEntryMetadataModelImpl dlFileEntryMetadataModelImpl) {
 
@@ -1134,48 +1090,6 @@ public class DLFileEntryMetadataPersistenceImpl
 		throws NoSuchFileEntryMetadataException {
 
 		return remove((Serializable)fileEntryMetadataId);
-	}
-
-	/**
-	 * Removes the document library file entry metadata with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the document library file entry metadata
-	 * @return the document library file entry metadata that was removed
-	 * @throws NoSuchFileEntryMetadataException if a document library file entry metadata with the primary key could not be found
-	 */
-	@Override
-	public DLFileEntryMetadata remove(Serializable primaryKey)
-		throws NoSuchFileEntryMetadataException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DLFileEntryMetadata dlFileEntryMetadata =
-				(DLFileEntryMetadata)session.get(
-					DLFileEntryMetadataImpl.class, primaryKey);
-
-			if (dlFileEntryMetadata == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchFileEntryMetadataException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(dlFileEntryMetadata);
-		}
-		catch (NoSuchFileEntryMetadataException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1353,31 +1267,6 @@ public class DLFileEntryMetadataPersistenceImpl
 	}
 
 	/**
-	 * Returns the document library file entry metadata with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the document library file entry metadata
-	 * @return the document library file entry metadata
-	 * @throws NoSuchFileEntryMetadataException if a document library file entry metadata with the primary key could not be found
-	 */
-	@Override
-	public DLFileEntryMetadata findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchFileEntryMetadataException {
-
-		DLFileEntryMetadata dlFileEntryMetadata = fetchByPrimaryKey(primaryKey);
-
-		if (dlFileEntryMetadata == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchFileEntryMetadataException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return dlFileEntryMetadata;
-	}
-
-	/**
 	 * Returns the document library file entry metadata with the primary key or throws a <code>NoSuchFileEntryMetadataException</code> if it could not be found.
 	 *
 	 * @param fileEntryMetadataId the primary key of the document library file entry metadata
@@ -1391,53 +1280,9 @@ public class DLFileEntryMetadataPersistenceImpl
 		return findByPrimaryKey((Serializable)fileEntryMetadataId);
 	}
 
-	/**
-	 * Returns the document library file entry metadata with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the document library file entry metadata
-	 * @return the document library file entry metadata, or <code>null</code> if a document library file entry metadata with the primary key could not be found
-	 */
 	@Override
-	public DLFileEntryMetadata fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				DLFileEntryMetadata.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DLFileEntryMetadata dlFileEntryMetadata =
-			(DLFileEntryMetadata)EntityCacheUtil.getResult(
-				DLFileEntryMetadataImpl.class, primaryKey);
-
-		if (dlFileEntryMetadata != null) {
-			return dlFileEntryMetadata;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			dlFileEntryMetadata = (DLFileEntryMetadata)session.get(
-				DLFileEntryMetadataImpl.class, primaryKey);
-
-			if (dlFileEntryMetadata != null) {
-				cacheResult(dlFileEntryMetadata);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return dlFileEntryMetadata;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -1449,137 +1294,6 @@ public class DLFileEntryMetadataPersistenceImpl
 	@Override
 	public DLFileEntryMetadata fetchByPrimaryKey(long fileEntryMetadataId) {
 		return fetchByPrimaryKey((Serializable)fileEntryMetadataId);
-	}
-
-	@Override
-	public Map<Serializable, DLFileEntryMetadata> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(
-				DLFileEntryMetadata.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DLFileEntryMetadata> map =
-			new HashMap<Serializable, DLFileEntryMetadata>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DLFileEntryMetadata dlFileEntryMetadata = fetchByPrimaryKey(
-				primaryKey);
-
-			if (dlFileEntryMetadata != null) {
-				map.put(primaryKey, dlFileEntryMetadata);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						DLFileEntryMetadata.class, primaryKey)) {
-
-				DLFileEntryMetadata dlFileEntryMetadata =
-					(DLFileEntryMetadata)EntityCacheUtil.getResult(
-						DLFileEntryMetadataImpl.class, primaryKey);
-
-				if (dlFileEntryMetadata == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, dlFileEntryMetadata);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DLFileEntryMetadata dlFileEntryMetadata :
-					(List<DLFileEntryMetadata>)query.list()) {
-
-				map.put(
-					dlFileEntryMetadata.getPrimaryKeyObj(),
-					dlFileEntryMetadata);
-
-				cacheResult(dlFileEntryMetadata);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2061,9 +1775,6 @@ public class DLFileEntryMetadataPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "dlFileEntryMetadata.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DLFileEntryMetadata exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DLFileEntryMetadata exists with the key {";
 
@@ -2079,4 +1790,4 @@ public class DLFileEntryMetadataPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1875813017
+// LIFERAY-SERVICE-BUILDER-HASH:-70158068

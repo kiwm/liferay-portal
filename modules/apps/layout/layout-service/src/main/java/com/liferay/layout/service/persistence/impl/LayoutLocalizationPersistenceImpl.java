@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = LayoutLocalizationPersistence.class)
 public class LayoutLocalizationPersistenceImpl
-	extends BasePersistenceImpl<LayoutLocalization>
+	extends BasePersistenceImpl
+		<LayoutLocalization, NoSuchLayoutLocalizationException>
 	implements LayoutLocalizationPersistence {
 
 	/*
@@ -961,50 +961,6 @@ public class LayoutLocalizationPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all layout localizations.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(LayoutLocalizationImpl.class);
-
-		finderCache.clearCache(LayoutLocalizationImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the layout localization.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(LayoutLocalization layoutLocalization) {
-		entityCache.removeResult(
-			LayoutLocalizationImpl.class, layoutLocalization);
-	}
-
-	@Override
-	public void clearCache(List<LayoutLocalization> layoutLocalizations) {
-		for (LayoutLocalization layoutLocalization : layoutLocalizations) {
-			entityCache.removeResult(
-				LayoutLocalizationImpl.class, layoutLocalization);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(LayoutLocalizationImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(LayoutLocalizationImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		LayoutLocalizationModelImpl layoutLocalizationModelImpl) {
 
@@ -1073,48 +1029,6 @@ public class LayoutLocalizationPersistenceImpl
 		throws NoSuchLayoutLocalizationException {
 
 		return remove((Serializable)layoutLocalizationId);
-	}
-
-	/**
-	 * Removes the layout localization with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the layout localization
-	 * @return the layout localization that was removed
-	 * @throws NoSuchLayoutLocalizationException if a layout localization with the primary key could not be found
-	 */
-	@Override
-	public LayoutLocalization remove(Serializable primaryKey)
-		throws NoSuchLayoutLocalizationException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			LayoutLocalization layoutLocalization =
-				(LayoutLocalization)session.get(
-					LayoutLocalizationImpl.class, primaryKey);
-
-			if (layoutLocalization == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchLayoutLocalizationException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(layoutLocalization);
-		}
-		catch (NoSuchLayoutLocalizationException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1251,31 +1165,6 @@ public class LayoutLocalizationPersistenceImpl
 	}
 
 	/**
-	 * Returns the layout localization with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the layout localization
-	 * @return the layout localization
-	 * @throws NoSuchLayoutLocalizationException if a layout localization with the primary key could not be found
-	 */
-	@Override
-	public LayoutLocalization findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchLayoutLocalizationException {
-
-		LayoutLocalization layoutLocalization = fetchByPrimaryKey(primaryKey);
-
-		if (layoutLocalization == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchLayoutLocalizationException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return layoutLocalization;
-	}
-
-	/**
 	 * Returns the layout localization with the primary key or throws a <code>NoSuchLayoutLocalizationException</code> if it could not be found.
 	 *
 	 * @param layoutLocalizationId the primary key of the layout localization
@@ -1289,53 +1178,9 @@ public class LayoutLocalizationPersistenceImpl
 		return findByPrimaryKey((Serializable)layoutLocalizationId);
 	}
 
-	/**
-	 * Returns the layout localization with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the layout localization
-	 * @return the layout localization, or <code>null</code> if a layout localization with the primary key could not be found
-	 */
 	@Override
-	public LayoutLocalization fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				LayoutLocalization.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		LayoutLocalization layoutLocalization =
-			(LayoutLocalization)entityCache.getResult(
-				LayoutLocalizationImpl.class, primaryKey);
-
-		if (layoutLocalization != null) {
-			return layoutLocalization;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			layoutLocalization = (LayoutLocalization)session.get(
-				LayoutLocalizationImpl.class, primaryKey);
-
-			if (layoutLocalization != null) {
-				cacheResult(layoutLocalization);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return layoutLocalization;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1347,134 +1192,6 @@ public class LayoutLocalizationPersistenceImpl
 	@Override
 	public LayoutLocalization fetchByPrimaryKey(long layoutLocalizationId) {
 		return fetchByPrimaryKey((Serializable)layoutLocalizationId);
-	}
-
-	@Override
-	public Map<Serializable, LayoutLocalization> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(LayoutLocalization.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, LayoutLocalization> map =
-			new HashMap<Serializable, LayoutLocalization>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			LayoutLocalization layoutLocalization = fetchByPrimaryKey(
-				primaryKey);
-
-			if (layoutLocalization != null) {
-				map.put(primaryKey, layoutLocalization);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						LayoutLocalization.class, primaryKey)) {
-
-				LayoutLocalization layoutLocalization =
-					(LayoutLocalization)entityCache.getResult(
-						LayoutLocalizationImpl.class, primaryKey);
-
-				if (layoutLocalization == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, layoutLocalization);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (LayoutLocalization layoutLocalization :
-					(List<LayoutLocalization>)query.list()) {
-
-				map.put(
-					layoutLocalization.getPrimaryKeyObj(), layoutLocalization);
-
-				cacheResult(layoutLocalization);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1978,9 +1695,6 @@ public class LayoutLocalizationPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "layoutLocalization.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No LayoutLocalization exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No LayoutLocalization exists with the key {";
 
@@ -1996,4 +1710,4 @@ public class LayoutLocalizationPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-520346813
+// LIFERAY-SERVICE-BUILDER-HASH:59767357

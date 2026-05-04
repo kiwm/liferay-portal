@@ -52,7 +52,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -76,7 +75,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = DDLRecordSetVersionPersistence.class)
 public class DDLRecordSetVersionPersistenceImpl
-	extends BasePersistenceImpl<DDLRecordSetVersion>
+	extends BasePersistenceImpl
+		<DDLRecordSetVersion, NoSuchRecordSetVersionException>
 	implements DDLRecordSetVersionPersistence {
 
 	/*
@@ -593,50 +593,6 @@ public class DDLRecordSetVersionPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all ddl record set versions.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(DDLRecordSetVersionImpl.class);
-
-		finderCache.clearCache(DDLRecordSetVersionImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the ddl record set version.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DDLRecordSetVersion ddlRecordSetVersion) {
-		entityCache.removeResult(
-			DDLRecordSetVersionImpl.class, ddlRecordSetVersion);
-	}
-
-	@Override
-	public void clearCache(List<DDLRecordSetVersion> ddlRecordSetVersions) {
-		for (DDLRecordSetVersion ddlRecordSetVersion : ddlRecordSetVersions) {
-			entityCache.removeResult(
-				DDLRecordSetVersionImpl.class, ddlRecordSetVersion);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(DDLRecordSetVersionImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(DDLRecordSetVersionImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DDLRecordSetVersionModelImpl ddlRecordSetVersionModelImpl) {
 
@@ -684,48 +640,6 @@ public class DDLRecordSetVersionPersistenceImpl
 		throws NoSuchRecordSetVersionException {
 
 		return remove((Serializable)recordSetVersionId);
-	}
-
-	/**
-	 * Removes the ddl record set version with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the ddl record set version
-	 * @return the ddl record set version that was removed
-	 * @throws NoSuchRecordSetVersionException if a ddl record set version with the primary key could not be found
-	 */
-	@Override
-	public DDLRecordSetVersion remove(Serializable primaryKey)
-		throws NoSuchRecordSetVersionException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DDLRecordSetVersion ddlRecordSetVersion =
-				(DDLRecordSetVersion)session.get(
-					DDLRecordSetVersionImpl.class, primaryKey);
-
-			if (ddlRecordSetVersion == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchRecordSetVersionException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(ddlRecordSetVersion);
-		}
-		catch (NoSuchRecordSetVersionException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -846,31 +760,6 @@ public class DDLRecordSetVersionPersistenceImpl
 	}
 
 	/**
-	 * Returns the ddl record set version with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddl record set version
-	 * @return the ddl record set version
-	 * @throws NoSuchRecordSetVersionException if a ddl record set version with the primary key could not be found
-	 */
-	@Override
-	public DDLRecordSetVersion findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchRecordSetVersionException {
-
-		DDLRecordSetVersion ddlRecordSetVersion = fetchByPrimaryKey(primaryKey);
-
-		if (ddlRecordSetVersion == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchRecordSetVersionException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return ddlRecordSetVersion;
-	}
-
-	/**
 	 * Returns the ddl record set version with the primary key or throws a <code>NoSuchRecordSetVersionException</code> if it could not be found.
 	 *
 	 * @param recordSetVersionId the primary key of the ddl record set version
@@ -884,53 +773,9 @@ public class DDLRecordSetVersionPersistenceImpl
 		return findByPrimaryKey((Serializable)recordSetVersionId);
 	}
 
-	/**
-	 * Returns the ddl record set version with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ddl record set version
-	 * @return the ddl record set version, or <code>null</code> if a ddl record set version with the primary key could not be found
-	 */
 	@Override
-	public DDLRecordSetVersion fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				DDLRecordSetVersion.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DDLRecordSetVersion ddlRecordSetVersion =
-			(DDLRecordSetVersion)entityCache.getResult(
-				DDLRecordSetVersionImpl.class, primaryKey);
-
-		if (ddlRecordSetVersion != null) {
-			return ddlRecordSetVersion;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ddlRecordSetVersion = (DDLRecordSetVersion)session.get(
-				DDLRecordSetVersionImpl.class, primaryKey);
-
-			if (ddlRecordSetVersion != null) {
-				cacheResult(ddlRecordSetVersion);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return ddlRecordSetVersion;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -942,135 +787,6 @@ public class DDLRecordSetVersionPersistenceImpl
 	@Override
 	public DDLRecordSetVersion fetchByPrimaryKey(long recordSetVersionId) {
 		return fetchByPrimaryKey((Serializable)recordSetVersionId);
-	}
-
-	@Override
-	public Map<Serializable, DDLRecordSetVersion> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(DDLRecordSetVersion.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DDLRecordSetVersion> map =
-			new HashMap<Serializable, DDLRecordSetVersion>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DDLRecordSetVersion ddlRecordSetVersion = fetchByPrimaryKey(
-				primaryKey);
-
-			if (ddlRecordSetVersion != null) {
-				map.put(primaryKey, ddlRecordSetVersion);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						DDLRecordSetVersion.class, primaryKey)) {
-
-				DDLRecordSetVersion ddlRecordSetVersion =
-					(DDLRecordSetVersion)entityCache.getResult(
-						DDLRecordSetVersionImpl.class, primaryKey);
-
-				if (ddlRecordSetVersion == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, ddlRecordSetVersion);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DDLRecordSetVersion ddlRecordSetVersion :
-					(List<DDLRecordSetVersion>)query.list()) {
-
-				map.put(
-					ddlRecordSetVersion.getPrimaryKeyObj(),
-					ddlRecordSetVersion);
-
-				cacheResult(ddlRecordSetVersion);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1514,9 +1230,6 @@ public class DDLRecordSetVersionPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "ddlRecordSetVersion.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DDLRecordSetVersion exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DDLRecordSetVersion exists with the key {";
 
@@ -1532,4 +1245,4 @@ public class DDLRecordSetVersionPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1262788046
+// LIFERAY-SERVICE-BUILDER-HASH:-314674212

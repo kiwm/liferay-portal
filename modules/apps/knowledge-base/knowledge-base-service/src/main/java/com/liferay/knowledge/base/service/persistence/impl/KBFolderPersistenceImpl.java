@@ -64,7 +64,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -89,7 +88,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = KBFolderPersistence.class)
 public class KBFolderPersistenceImpl
-	extends BasePersistenceImpl<KBFolder> implements KBFolderPersistence {
+	extends BasePersistenceImpl<KBFolder, NoSuchFolderException>
+	implements KBFolderPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -1870,48 +1870,6 @@ public class KBFolderPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all kb folders.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(KBFolderImpl.class);
-
-		finderCache.clearCache(KBFolderImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the kb folder.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(KBFolder kbFolder) {
-		entityCache.removeResult(KBFolderImpl.class, kbFolder);
-	}
-
-	@Override
-	public void clearCache(List<KBFolder> kbFolders) {
-		for (KBFolder kbFolder : kbFolders) {
-			entityCache.removeResult(KBFolderImpl.class, kbFolder);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(KBFolderImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(KBFolderImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		KBFolderModelImpl kbFolderModelImpl) {
 
@@ -1986,47 +1944,6 @@ public class KBFolderPersistenceImpl
 	@Override
 	public KBFolder remove(long kbFolderId) throws NoSuchFolderException {
 		return remove((Serializable)kbFolderId);
-	}
-
-	/**
-	 * Removes the kb folder with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the kb folder
-	 * @return the kb folder that was removed
-	 * @throws NoSuchFolderException if a kb folder with the primary key could not be found
-	 */
-	@Override
-	public KBFolder remove(Serializable primaryKey)
-		throws NoSuchFolderException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			KBFolder kbFolder = (KBFolder)session.get(
-				KBFolderImpl.class, primaryKey);
-
-			if (kbFolder == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchFolderException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(kbFolder);
-		}
-		catch (NoSuchFolderException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -2209,31 +2126,6 @@ public class KBFolderPersistenceImpl
 	}
 
 	/**
-	 * Returns the kb folder with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kb folder
-	 * @return the kb folder
-	 * @throws NoSuchFolderException if a kb folder with the primary key could not be found
-	 */
-	@Override
-	public KBFolder findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchFolderException {
-
-		KBFolder kbFolder = fetchByPrimaryKey(primaryKey);
-
-		if (kbFolder == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchFolderException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return kbFolder;
-	}
-
-	/**
 	 * Returns the kb folder with the primary key or throws a <code>NoSuchFolderException</code> if it could not be found.
 	 *
 	 * @param kbFolderId the primary key of the kb folder
@@ -2247,49 +2139,9 @@ public class KBFolderPersistenceImpl
 		return findByPrimaryKey((Serializable)kbFolderId);
 	}
 
-	/**
-	 * Returns the kb folder with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kb folder
-	 * @return the kb folder, or <code>null</code> if a kb folder with the primary key could not be found
-	 */
 	@Override
-	public KBFolder fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(KBFolder.class, primaryKey)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		KBFolder kbFolder = (KBFolder)entityCache.getResult(
-			KBFolderImpl.class, primaryKey);
-
-		if (kbFolder != null) {
-			return kbFolder;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			kbFolder = (KBFolder)session.get(KBFolderImpl.class, primaryKey);
-
-			if (kbFolder != null) {
-				cacheResult(kbFolder);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return kbFolder;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -2301,128 +2153,6 @@ public class KBFolderPersistenceImpl
 	@Override
 	public KBFolder fetchByPrimaryKey(long kbFolderId) {
 		return fetchByPrimaryKey((Serializable)kbFolderId);
-	}
-
-	@Override
-	public Map<Serializable, KBFolder> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(KBFolder.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, KBFolder> map = new HashMap<Serializable, KBFolder>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			KBFolder kbFolder = fetchByPrimaryKey(primaryKey);
-
-			if (kbFolder != null) {
-				map.put(primaryKey, kbFolder);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						KBFolder.class, primaryKey)) {
-
-				KBFolder kbFolder = (KBFolder)entityCache.getResult(
-					KBFolderImpl.class, primaryKey);
-
-				if (kbFolder == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, kbFolder);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (KBFolder kbFolder : (List<KBFolder>)query.list()) {
-				map.put(kbFolder.getPrimaryKeyObj(), kbFolder);
-
-				cacheResult(kbFolder);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -3042,9 +2772,6 @@ public class KBFolderPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "KBFolder.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No KBFolder exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No KBFolder exists with the key {";
 
@@ -3060,4 +2787,4 @@ public class KBFolderPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1721473923
+// LIFERAY-SERVICE-BUILDER-HASH:-1784252829

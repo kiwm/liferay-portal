@@ -51,9 +51,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -77,7 +75,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = SubscriptionPersistence.class)
 public class SubscriptionPersistenceImpl
-	extends BasePersistenceImpl<Subscription>
+	extends BasePersistenceImpl<Subscription, NoSuchSubscriptionException>
 	implements SubscriptionPersistence {
 
 	/*
@@ -1772,48 +1770,6 @@ public class SubscriptionPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all subscriptions.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(SubscriptionImpl.class);
-
-		finderCache.clearCache(SubscriptionImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the subscription.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(Subscription subscription) {
-		entityCache.removeResult(SubscriptionImpl.class, subscription);
-	}
-
-	@Override
-	public void clearCache(List<Subscription> subscriptions) {
-		for (Subscription subscription : subscriptions) {
-			entityCache.removeResult(SubscriptionImpl.class, subscription);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(SubscriptionImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(SubscriptionImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		SubscriptionModelImpl subscriptionModelImpl) {
 
@@ -1863,47 +1819,6 @@ public class SubscriptionPersistenceImpl
 		throws NoSuchSubscriptionException {
 
 		return remove((Serializable)subscriptionId);
-	}
-
-	/**
-	 * Removes the subscription with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the subscription
-	 * @return the subscription that was removed
-	 * @throws NoSuchSubscriptionException if a subscription with the primary key could not be found
-	 */
-	@Override
-	public Subscription remove(Serializable primaryKey)
-		throws NoSuchSubscriptionException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Subscription subscription = (Subscription)session.get(
-				SubscriptionImpl.class, primaryKey);
-
-			if (subscription == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchSubscriptionException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(subscription);
-		}
-		catch (NoSuchSubscriptionException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -2026,31 +1941,6 @@ public class SubscriptionPersistenceImpl
 	}
 
 	/**
-	 * Returns the subscription with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the subscription
-	 * @return the subscription
-	 * @throws NoSuchSubscriptionException if a subscription with the primary key could not be found
-	 */
-	@Override
-	public Subscription findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchSubscriptionException {
-
-		Subscription subscription = fetchByPrimaryKey(primaryKey);
-
-		if (subscription == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchSubscriptionException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return subscription;
-	}
-
-	/**
 	 * Returns the subscription with the primary key or throws a <code>NoSuchSubscriptionException</code> if it could not be found.
 	 *
 	 * @param subscriptionId the primary key of the subscription
@@ -2064,52 +1954,9 @@ public class SubscriptionPersistenceImpl
 		return findByPrimaryKey((Serializable)subscriptionId);
 	}
 
-	/**
-	 * Returns the subscription with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the subscription
-	 * @return the subscription, or <code>null</code> if a subscription with the primary key could not be found
-	 */
 	@Override
-	public Subscription fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				Subscription.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		Subscription subscription = (Subscription)entityCache.getResult(
-			SubscriptionImpl.class, primaryKey);
-
-		if (subscription != null) {
-			return subscription;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			subscription = (Subscription)session.get(
-				SubscriptionImpl.class, primaryKey);
-
-			if (subscription != null) {
-				cacheResult(subscription);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return subscription;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -2121,129 +1968,6 @@ public class SubscriptionPersistenceImpl
 	@Override
 	public Subscription fetchByPrimaryKey(long subscriptionId) {
 		return fetchByPrimaryKey((Serializable)subscriptionId);
-	}
-
-	@Override
-	public Map<Serializable, Subscription> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(Subscription.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, Subscription> map =
-			new HashMap<Serializable, Subscription>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			Subscription subscription = fetchByPrimaryKey(primaryKey);
-
-			if (subscription != null) {
-				map.put(primaryKey, subscription);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						Subscription.class, primaryKey)) {
-
-				Subscription subscription = (Subscription)entityCache.getResult(
-					SubscriptionImpl.class, primaryKey);
-
-				if (subscription == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, subscription);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (Subscription subscription : (List<Subscription>)query.list()) {
-				map.put(subscription.getPrimaryKeyObj(), subscription);
-
-				cacheResult(subscription);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2832,9 +2556,6 @@ public class SubscriptionPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "subscription.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No Subscription exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No Subscription exists with the key {";
 
@@ -2847,4 +2568,4 @@ public class SubscriptionPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1515446536
+// LIFERAY-SERVICE-BUILDER-HASH:307461378

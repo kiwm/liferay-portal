@@ -57,9 +57,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -84,7 +82,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CSDiagramEntryPersistence.class)
 public class CSDiagramEntryPersistenceImpl
-	extends BasePersistenceImpl<CSDiagramEntry>
+	extends BasePersistenceImpl<CSDiagramEntry, NoSuchCSDiagramEntryException>
 	implements CSDiagramEntryPersistence {
 
 	/*
@@ -854,48 +852,6 @@ public class CSDiagramEntryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all cs diagram entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CSDiagramEntryImpl.class);
-
-		finderCache.clearCache(CSDiagramEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the cs diagram entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(CSDiagramEntry csDiagramEntry) {
-		entityCache.removeResult(CSDiagramEntryImpl.class, csDiagramEntry);
-	}
-
-	@Override
-	public void clearCache(List<CSDiagramEntry> csDiagramEntries) {
-		for (CSDiagramEntry csDiagramEntry : csDiagramEntries) {
-			entityCache.removeResult(CSDiagramEntryImpl.class, csDiagramEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CSDiagramEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(CSDiagramEntryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		CSDiagramEntryModelImpl csDiagramEntryModelImpl) {
 
@@ -951,47 +907,6 @@ public class CSDiagramEntryPersistenceImpl
 		throws NoSuchCSDiagramEntryException {
 
 		return remove((Serializable)CSDiagramEntryId);
-	}
-
-	/**
-	 * Removes the cs diagram entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the cs diagram entry
-	 * @return the cs diagram entry that was removed
-	 * @throws NoSuchCSDiagramEntryException if a cs diagram entry with the primary key could not be found
-	 */
-	@Override
-	public CSDiagramEntry remove(Serializable primaryKey)
-		throws NoSuchCSDiagramEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CSDiagramEntry csDiagramEntry = (CSDiagramEntry)session.get(
-				CSDiagramEntryImpl.class, primaryKey);
-
-			if (csDiagramEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCSDiagramEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(csDiagramEntry);
-		}
-		catch (NoSuchCSDiagramEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1182,31 +1097,6 @@ public class CSDiagramEntryPersistenceImpl
 	}
 
 	/**
-	 * Returns the cs diagram entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cs diagram entry
-	 * @return the cs diagram entry
-	 * @throws NoSuchCSDiagramEntryException if a cs diagram entry with the primary key could not be found
-	 */
-	@Override
-	public CSDiagramEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCSDiagramEntryException {
-
-		CSDiagramEntry csDiagramEntry = fetchByPrimaryKey(primaryKey);
-
-		if (csDiagramEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCSDiagramEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return csDiagramEntry;
-	}
-
-	/**
 	 * Returns the cs diagram entry with the primary key or throws a <code>NoSuchCSDiagramEntryException</code> if it could not be found.
 	 *
 	 * @param CSDiagramEntryId the primary key of the cs diagram entry
@@ -1220,52 +1110,9 @@ public class CSDiagramEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)CSDiagramEntryId);
 	}
 
-	/**
-	 * Returns the cs diagram entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cs diagram entry
-	 * @return the cs diagram entry, or <code>null</code> if a cs diagram entry with the primary key could not be found
-	 */
 	@Override
-	public CSDiagramEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				CSDiagramEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		CSDiagramEntry csDiagramEntry = (CSDiagramEntry)entityCache.getResult(
-			CSDiagramEntryImpl.class, primaryKey);
-
-		if (csDiagramEntry != null) {
-			return csDiagramEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			csDiagramEntry = (CSDiagramEntry)session.get(
-				CSDiagramEntryImpl.class, primaryKey);
-
-			if (csDiagramEntry != null) {
-				cacheResult(csDiagramEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return csDiagramEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1277,132 +1124,6 @@ public class CSDiagramEntryPersistenceImpl
 	@Override
 	public CSDiagramEntry fetchByPrimaryKey(long CSDiagramEntryId) {
 		return fetchByPrimaryKey((Serializable)CSDiagramEntryId);
-	}
-
-	@Override
-	public Map<Serializable, CSDiagramEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(CSDiagramEntry.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, CSDiagramEntry> map =
-			new HashMap<Serializable, CSDiagramEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			CSDiagramEntry csDiagramEntry = fetchByPrimaryKey(primaryKey);
-
-			if (csDiagramEntry != null) {
-				map.put(primaryKey, csDiagramEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						CSDiagramEntry.class, primaryKey)) {
-
-				CSDiagramEntry csDiagramEntry =
-					(CSDiagramEntry)entityCache.getResult(
-						CSDiagramEntryImpl.class, primaryKey);
-
-				if (csDiagramEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, csDiagramEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (CSDiagramEntry csDiagramEntry :
-					(List<CSDiagramEntry>)query.list()) {
-
-				map.put(csDiagramEntry.getPrimaryKeyObj(), csDiagramEntry);
-
-				cacheResult(csDiagramEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1884,9 +1605,6 @@ public class CSDiagramEntryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "csDiagramEntry.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CSDiagramEntry exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CSDiagramEntry exists with the key {";
 
@@ -1899,4 +1617,4 @@ public class CSDiagramEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1913923991
+// LIFERAY-SERVICE-BUILDER-HASH:-342156850

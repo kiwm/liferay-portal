@@ -61,7 +61,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -86,7 +85,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = StyleBookEntryPersistence.class)
 public class StyleBookEntryPersistenceImpl
-	extends BasePersistenceImpl<StyleBookEntry>
+	extends BasePersistenceImpl<StyleBookEntry, NoSuchEntryException>
 	implements StyleBookEntryPersistence {
 
 	/*
@@ -3901,48 +3900,6 @@ public class StyleBookEntryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all style book entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(StyleBookEntryImpl.class);
-
-		finderCache.clearCache(StyleBookEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the style book entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(StyleBookEntry styleBookEntry) {
-		entityCache.removeResult(StyleBookEntryImpl.class, styleBookEntry);
-	}
-
-	@Override
-	public void clearCache(List<StyleBookEntry> styleBookEntries) {
-		for (StyleBookEntry styleBookEntry : styleBookEntries) {
-			entityCache.removeResult(StyleBookEntryImpl.class, styleBookEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(StyleBookEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(StyleBookEntryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		StyleBookEntryModelImpl styleBookEntryModelImpl) {
 
@@ -4018,47 +3975,6 @@ public class StyleBookEntryPersistenceImpl
 		throws NoSuchEntryException {
 
 		return remove((Serializable)styleBookEntryId);
-	}
-
-	/**
-	 * Removes the style book entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the style book entry
-	 * @return the style book entry that was removed
-	 * @throws NoSuchEntryException if a style book entry with the primary key could not be found
-	 */
-	@Override
-	public StyleBookEntry remove(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			StyleBookEntry styleBookEntry = (StyleBookEntry)session.get(
-				StyleBookEntryImpl.class, primaryKey);
-
-			if (styleBookEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(styleBookEntry);
-		}
-		catch (NoSuchEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -4252,31 +4168,6 @@ public class StyleBookEntryPersistenceImpl
 	}
 
 	/**
-	 * Returns the style book entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the style book entry
-	 * @return the style book entry
-	 * @throws NoSuchEntryException if a style book entry with the primary key could not be found
-	 */
-	@Override
-	public StyleBookEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		StyleBookEntry styleBookEntry = fetchByPrimaryKey(primaryKey);
-
-		if (styleBookEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return styleBookEntry;
-	}
-
-	/**
 	 * Returns the style book entry with the primary key or throws a <code>NoSuchEntryException</code> if it could not be found.
 	 *
 	 * @param styleBookEntryId the primary key of the style book entry
@@ -4290,52 +4181,9 @@ public class StyleBookEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)styleBookEntryId);
 	}
 
-	/**
-	 * Returns the style book entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the style book entry
-	 * @return the style book entry, or <code>null</code> if a style book entry with the primary key could not be found
-	 */
 	@Override
-	public StyleBookEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				StyleBookEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		StyleBookEntry styleBookEntry = (StyleBookEntry)entityCache.getResult(
-			StyleBookEntryImpl.class, primaryKey);
-
-		if (styleBookEntry != null) {
-			return styleBookEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			styleBookEntry = (StyleBookEntry)session.get(
-				StyleBookEntryImpl.class, primaryKey);
-
-			if (styleBookEntry != null) {
-				cacheResult(styleBookEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return styleBookEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -4347,132 +4195,6 @@ public class StyleBookEntryPersistenceImpl
 	@Override
 	public StyleBookEntry fetchByPrimaryKey(long styleBookEntryId) {
 		return fetchByPrimaryKey((Serializable)styleBookEntryId);
-	}
-
-	@Override
-	public Map<Serializable, StyleBookEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(StyleBookEntry.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, StyleBookEntry> map =
-			new HashMap<Serializable, StyleBookEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			StyleBookEntry styleBookEntry = fetchByPrimaryKey(primaryKey);
-
-			if (styleBookEntry != null) {
-				map.put(primaryKey, styleBookEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						StyleBookEntry.class, primaryKey)) {
-
-				StyleBookEntry styleBookEntry =
-					(StyleBookEntry)entityCache.getResult(
-						StyleBookEntryImpl.class, primaryKey);
-
-				if (styleBookEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, styleBookEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (StyleBookEntry styleBookEntry :
-					(List<StyleBookEntry>)query.list()) {
-
-				map.put(styleBookEntry.getPrimaryKeyObj(), styleBookEntry);
-
-				cacheResult(styleBookEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -5600,9 +5322,6 @@ public class StyleBookEntryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "styleBookEntry.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No StyleBookEntry exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No StyleBookEntry exists with the key {";
 
@@ -5618,4 +5337,4 @@ public class StyleBookEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:125110814
+// LIFERAY-SERVICE-BUILDER-HASH:1542732232

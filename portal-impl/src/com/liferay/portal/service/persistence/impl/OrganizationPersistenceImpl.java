@@ -39,6 +39,7 @@ import com.liferay.portal.kernel.service.persistence.GroupPersistence;
 import com.liferay.portal.kernel.service.persistence.OrganizationPersistence;
 import com.liferay.portal.kernel.service.persistence.OrganizationUtil;
 import com.liferay.portal.kernel.service.persistence.UserPersistence;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -71,7 +72,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -88,7 +88,7 @@ import java.util.Set;
  * @generated
  */
 public class OrganizationPersistenceImpl
-	extends BasePersistenceImpl<Organization>
+	extends BasePersistenceImpl<Organization, NoSuchOrganizationException>
 	implements OrganizationPersistence {
 
 	/*
@@ -4865,48 +4865,6 @@ public class OrganizationPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all organizations.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(OrganizationImpl.class);
-
-		FinderCacheUtil.clearCache(OrganizationImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the organization.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(Organization organization) {
-		EntityCacheUtil.removeResult(OrganizationImpl.class, organization);
-	}
-
-	@Override
-	public void clearCache(List<Organization> organizations) {
-		for (Organization organization : organizations) {
-			EntityCacheUtil.removeResult(OrganizationImpl.class, organization);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(OrganizationImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(OrganizationImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		OrganizationModelImpl organizationModelImpl) {
 
@@ -4966,47 +4924,6 @@ public class OrganizationPersistenceImpl
 		throws NoSuchOrganizationException {
 
 		return remove((Serializable)organizationId);
-	}
-
-	/**
-	 * Removes the organization with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the organization
-	 * @return the organization that was removed
-	 * @throws NoSuchOrganizationException if a organization with the primary key could not be found
-	 */
-	@Override
-	public Organization remove(Serializable primaryKey)
-		throws NoSuchOrganizationException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Organization organization = (Organization)session.get(
-				OrganizationImpl.class, primaryKey);
-
-			if (organization == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchOrganizationException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(organization);
-		}
-		catch (NoSuchOrganizationException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -5203,31 +5120,6 @@ public class OrganizationPersistenceImpl
 	}
 
 	/**
-	 * Returns the organization with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the organization
-	 * @return the organization
-	 * @throws NoSuchOrganizationException if a organization with the primary key could not be found
-	 */
-	@Override
-	public Organization findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchOrganizationException {
-
-		Organization organization = fetchByPrimaryKey(primaryKey);
-
-		if (organization == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchOrganizationException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return organization;
-	}
-
-	/**
 	 * Returns the organization with the primary key or throws a <code>NoSuchOrganizationException</code> if it could not be found.
 	 *
 	 * @param organizationId the primary key of the organization
@@ -5241,52 +5133,9 @@ public class OrganizationPersistenceImpl
 		return findByPrimaryKey((Serializable)organizationId);
 	}
 
-	/**
-	 * Returns the organization with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the organization
-	 * @return the organization, or <code>null</code> if a organization with the primary key could not be found
-	 */
 	@Override
-	public Organization fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				Organization.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		Organization organization = (Organization)EntityCacheUtil.getResult(
-			OrganizationImpl.class, primaryKey);
-
-		if (organization != null) {
-			return organization;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			organization = (Organization)session.get(
-				OrganizationImpl.class, primaryKey);
-
-			if (organization != null) {
-				cacheResult(organization);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return organization;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -5298,130 +5147,6 @@ public class OrganizationPersistenceImpl
 	@Override
 	public Organization fetchByPrimaryKey(long organizationId) {
 		return fetchByPrimaryKey((Serializable)organizationId);
-	}
-
-	@Override
-	public Map<Serializable, Organization> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(Organization.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, Organization> map =
-			new HashMap<Serializable, Organization>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			Organization organization = fetchByPrimaryKey(primaryKey);
-
-			if (organization != null) {
-				map.put(primaryKey, organization);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						Organization.class, primaryKey)) {
-
-				Organization organization =
-					(Organization)EntityCacheUtil.getResult(
-						OrganizationImpl.class, primaryKey);
-
-				if (organization == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, organization);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (Organization organization : (List<Organization>)query.list()) {
-				map.put(organization.getPrimaryKeyObj(), organization);
-
-				cacheResult(organization);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -6739,9 +6464,6 @@ public class OrganizationPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "Organization_.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No Organization exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No Organization exists with the key {";
 
@@ -6757,4 +6479,4 @@ public class OrganizationPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:714534289
+// LIFERAY-SERVICE-BUILDER-HASH:-1966067586

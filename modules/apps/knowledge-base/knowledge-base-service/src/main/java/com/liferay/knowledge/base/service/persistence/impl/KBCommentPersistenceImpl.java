@@ -57,7 +57,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -81,7 +80,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = KBCommentPersistence.class)
 public class KBCommentPersistenceImpl
-	extends BasePersistenceImpl<KBComment> implements KBCommentPersistence {
+	extends BasePersistenceImpl<KBComment, NoSuchCommentException>
+	implements KBCommentPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -2073,48 +2073,6 @@ public class KBCommentPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all kb comments.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(KBCommentImpl.class);
-
-		finderCache.clearCache(KBCommentImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the kb comment.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(KBComment kbComment) {
-		entityCache.removeResult(KBCommentImpl.class, kbComment);
-	}
-
-	@Override
-	public void clearCache(List<KBComment> kbComments) {
-		for (KBComment kbComment : kbComments) {
-			entityCache.removeResult(KBCommentImpl.class, kbComment);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(KBCommentImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(KBCommentImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		KBCommentModelImpl kbCommentModelImpl) {
 
@@ -2163,47 +2121,6 @@ public class KBCommentPersistenceImpl
 	@Override
 	public KBComment remove(long kbCommentId) throws NoSuchCommentException {
 		return remove((Serializable)kbCommentId);
-	}
-
-	/**
-	 * Removes the kb comment with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the kb comment
-	 * @return the kb comment that was removed
-	 * @throws NoSuchCommentException if a kb comment with the primary key could not be found
-	 */
-	@Override
-	public KBComment remove(Serializable primaryKey)
-		throws NoSuchCommentException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			KBComment kbComment = (KBComment)session.get(
-				KBCommentImpl.class, primaryKey);
-
-			if (kbComment == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCommentException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(kbComment);
-		}
-		catch (NoSuchCommentException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -2328,31 +2245,6 @@ public class KBCommentPersistenceImpl
 	}
 
 	/**
-	 * Returns the kb comment with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kb comment
-	 * @return the kb comment
-	 * @throws NoSuchCommentException if a kb comment with the primary key could not be found
-	 */
-	@Override
-	public KBComment findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCommentException {
-
-		KBComment kbComment = fetchByPrimaryKey(primaryKey);
-
-		if (kbComment == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCommentException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return kbComment;
-	}
-
-	/**
 	 * Returns the kb comment with the primary key or throws a <code>NoSuchCommentException</code> if it could not be found.
 	 *
 	 * @param kbCommentId the primary key of the kb comment
@@ -2366,49 +2258,9 @@ public class KBCommentPersistenceImpl
 		return findByPrimaryKey((Serializable)kbCommentId);
 	}
 
-	/**
-	 * Returns the kb comment with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kb comment
-	 * @return the kb comment, or <code>null</code> if a kb comment with the primary key could not be found
-	 */
 	@Override
-	public KBComment fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(KBComment.class, primaryKey)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		KBComment kbComment = (KBComment)entityCache.getResult(
-			KBCommentImpl.class, primaryKey);
-
-		if (kbComment != null) {
-			return kbComment;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			kbComment = (KBComment)session.get(KBCommentImpl.class, primaryKey);
-
-			if (kbComment != null) {
-				cacheResult(kbComment);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return kbComment;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -2420,129 +2272,6 @@ public class KBCommentPersistenceImpl
 	@Override
 	public KBComment fetchByPrimaryKey(long kbCommentId) {
 		return fetchByPrimaryKey((Serializable)kbCommentId);
-	}
-
-	@Override
-	public Map<Serializable, KBComment> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(KBComment.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, KBComment> map =
-			new HashMap<Serializable, KBComment>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			KBComment kbComment = fetchByPrimaryKey(primaryKey);
-
-			if (kbComment != null) {
-				map.put(primaryKey, kbComment);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						KBComment.class, primaryKey)) {
-
-				KBComment kbComment = (KBComment)entityCache.getResult(
-					KBCommentImpl.class, primaryKey);
-
-				if (kbComment == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, kbComment);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (KBComment kbComment : (List<KBComment>)query.list()) {
-				map.put(kbComment.getPrimaryKeyObj(), kbComment);
-
-				cacheResult(kbComment);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -3171,9 +2900,6 @@ public class KBCommentPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "kbComment.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No KBComment exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No KBComment exists with the key {";
 
@@ -3189,4 +2915,4 @@ public class KBCommentPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-2118001786
+// LIFERAY-SERVICE-BUILDER-HASH:1004043163

@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,9 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = LayoutPageTemplateStructureRelPersistence.class)
 public class LayoutPageTemplateStructureRelPersistenceImpl
-	extends BasePersistenceImpl<LayoutPageTemplateStructureRel>
+	extends BasePersistenceImpl
+		<LayoutPageTemplateStructureRel,
+		 NoSuchPageTemplateStructureRelException>
 	implements LayoutPageTemplateStructureRelPersistence {
 
 	/*
@@ -1097,59 +1098,6 @@ public class LayoutPageTemplateStructureRelPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all layout page template structure rels.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(LayoutPageTemplateStructureRelImpl.class);
-
-		finderCache.clearCache(LayoutPageTemplateStructureRelImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the layout page template structure rel.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(
-		LayoutPageTemplateStructureRel layoutPageTemplateStructureRel) {
-
-		entityCache.removeResult(
-			LayoutPageTemplateStructureRelImpl.class,
-			layoutPageTemplateStructureRel);
-	}
-
-	@Override
-	public void clearCache(
-		List<LayoutPageTemplateStructureRel> layoutPageTemplateStructureRels) {
-
-		for (LayoutPageTemplateStructureRel layoutPageTemplateStructureRel :
-				layoutPageTemplateStructureRels) {
-
-			entityCache.removeResult(
-				LayoutPageTemplateStructureRelImpl.class,
-				layoutPageTemplateStructureRel);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(LayoutPageTemplateStructureRelImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				LayoutPageTemplateStructureRelImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		LayoutPageTemplateStructureRelModelImpl
 			layoutPageTemplateStructureRelModelImpl) {
@@ -1221,48 +1169,6 @@ public class LayoutPageTemplateStructureRelPersistenceImpl
 		throws NoSuchPageTemplateStructureRelException {
 
 		return remove((Serializable)layoutPageTemplateStructureRelId);
-	}
-
-	/**
-	 * Removes the layout page template structure rel with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the layout page template structure rel
-	 * @return the layout page template structure rel that was removed
-	 * @throws NoSuchPageTemplateStructureRelException if a layout page template structure rel with the primary key could not be found
-	 */
-	@Override
-	public LayoutPageTemplateStructureRel remove(Serializable primaryKey)
-		throws NoSuchPageTemplateStructureRelException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			LayoutPageTemplateStructureRel layoutPageTemplateStructureRel =
-				(LayoutPageTemplateStructureRel)session.get(
-					LayoutPageTemplateStructureRelImpl.class, primaryKey);
-
-			if (layoutPageTemplateStructureRel == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchPageTemplateStructureRelException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(layoutPageTemplateStructureRel);
-		}
-		catch (NoSuchPageTemplateStructureRelException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1407,33 +1313,6 @@ public class LayoutPageTemplateStructureRelPersistenceImpl
 	}
 
 	/**
-	 * Returns the layout page template structure rel with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the layout page template structure rel
-	 * @return the layout page template structure rel
-	 * @throws NoSuchPageTemplateStructureRelException if a layout page template structure rel with the primary key could not be found
-	 */
-	@Override
-	public LayoutPageTemplateStructureRel findByPrimaryKey(
-			Serializable primaryKey)
-		throws NoSuchPageTemplateStructureRelException {
-
-		LayoutPageTemplateStructureRel layoutPageTemplateStructureRel =
-			fetchByPrimaryKey(primaryKey);
-
-		if (layoutPageTemplateStructureRel == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchPageTemplateStructureRelException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return layoutPageTemplateStructureRel;
-	}
-
-	/**
 	 * Returns the layout page template structure rel with the primary key or throws a <code>NoSuchPageTemplateStructureRelException</code> if it could not be found.
 	 *
 	 * @param layoutPageTemplateStructureRelId the primary key of the layout page template structure rel
@@ -1448,56 +1327,9 @@ public class LayoutPageTemplateStructureRelPersistenceImpl
 		return findByPrimaryKey((Serializable)layoutPageTemplateStructureRelId);
 	}
 
-	/**
-	 * Returns the layout page template structure rel with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the layout page template structure rel
-	 * @return the layout page template structure rel, or <code>null</code> if a layout page template structure rel with the primary key could not be found
-	 */
 	@Override
-	public LayoutPageTemplateStructureRel fetchByPrimaryKey(
-		Serializable primaryKey) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				LayoutPageTemplateStructureRel.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		LayoutPageTemplateStructureRel layoutPageTemplateStructureRel =
-			(LayoutPageTemplateStructureRel)entityCache.getResult(
-				LayoutPageTemplateStructureRelImpl.class, primaryKey);
-
-		if (layoutPageTemplateStructureRel != null) {
-			return layoutPageTemplateStructureRel;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			layoutPageTemplateStructureRel =
-				(LayoutPageTemplateStructureRel)session.get(
-					LayoutPageTemplateStructureRelImpl.class, primaryKey);
-
-			if (layoutPageTemplateStructureRel != null) {
-				cacheResult(layoutPageTemplateStructureRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return layoutPageTemplateStructureRel;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1512,137 +1344,6 @@ public class LayoutPageTemplateStructureRelPersistenceImpl
 
 		return fetchByPrimaryKey(
 			(Serializable)layoutPageTemplateStructureRelId);
-	}
-
-	@Override
-	public Map<Serializable, LayoutPageTemplateStructureRel> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				LayoutPageTemplateStructureRel.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, LayoutPageTemplateStructureRel> map =
-			new HashMap<Serializable, LayoutPageTemplateStructureRel>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			LayoutPageTemplateStructureRel layoutPageTemplateStructureRel =
-				fetchByPrimaryKey(primaryKey);
-
-			if (layoutPageTemplateStructureRel != null) {
-				map.put(primaryKey, layoutPageTemplateStructureRel);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						LayoutPageTemplateStructureRel.class, primaryKey)) {
-
-				LayoutPageTemplateStructureRel layoutPageTemplateStructureRel =
-					(LayoutPageTemplateStructureRel)entityCache.getResult(
-						LayoutPageTemplateStructureRelImpl.class, primaryKey);
-
-				if (layoutPageTemplateStructureRel == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, layoutPageTemplateStructureRel);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (LayoutPageTemplateStructureRel layoutPageTemplateStructureRel :
-					(List<LayoutPageTemplateStructureRel>)query.list()) {
-
-				map.put(
-					layoutPageTemplateStructureRel.getPrimaryKeyObj(),
-					layoutPageTemplateStructureRel);
-
-				cacheResult(layoutPageTemplateStructureRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2202,9 +1903,6 @@ public class LayoutPageTemplateStructureRelPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"layoutPageTemplateStructureRel.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No LayoutPageTemplateStructureRel exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No LayoutPageTemplateStructureRel exists with the key {";
 
@@ -2220,4 +1918,4 @@ public class LayoutPageTemplateStructureRelPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1409674228
+// LIFERAY-SERVICE-BUILDER-HASH:-885145422

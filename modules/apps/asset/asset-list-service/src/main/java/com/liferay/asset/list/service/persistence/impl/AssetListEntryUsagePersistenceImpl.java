@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = AssetListEntryUsagePersistence.class)
 public class AssetListEntryUsagePersistenceImpl
-	extends BasePersistenceImpl<AssetListEntryUsage>
+	extends BasePersistenceImpl<AssetListEntryUsage, NoSuchEntryUsageException>
 	implements AssetListEntryUsagePersistence {
 
 	/*
@@ -1802,50 +1801,6 @@ public class AssetListEntryUsagePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all asset list entry usages.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(AssetListEntryUsageImpl.class);
-
-		finderCache.clearCache(AssetListEntryUsageImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the asset list entry usage.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(AssetListEntryUsage assetListEntryUsage) {
-		entityCache.removeResult(
-			AssetListEntryUsageImpl.class, assetListEntryUsage);
-	}
-
-	@Override
-	public void clearCache(List<AssetListEntryUsage> assetListEntryUsages) {
-		for (AssetListEntryUsage assetListEntryUsage : assetListEntryUsages) {
-			entityCache.removeResult(
-				AssetListEntryUsageImpl.class, assetListEntryUsage);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(AssetListEntryUsageImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(AssetListEntryUsageImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		AssetListEntryUsageModelImpl assetListEntryUsageModelImpl) {
 
@@ -1910,48 +1865,6 @@ public class AssetListEntryUsagePersistenceImpl
 		throws NoSuchEntryUsageException {
 
 		return remove((Serializable)assetListEntryUsageId);
-	}
-
-	/**
-	 * Removes the asset list entry usage with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the asset list entry usage
-	 * @return the asset list entry usage that was removed
-	 * @throws NoSuchEntryUsageException if a asset list entry usage with the primary key could not be found
-	 */
-	@Override
-	public AssetListEntryUsage remove(Serializable primaryKey)
-		throws NoSuchEntryUsageException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			AssetListEntryUsage assetListEntryUsage =
-				(AssetListEntryUsage)session.get(
-					AssetListEntryUsageImpl.class, primaryKey);
-
-			if (assetListEntryUsage == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEntryUsageException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(assetListEntryUsage);
-		}
-		catch (NoSuchEntryUsageException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -2088,31 +2001,6 @@ public class AssetListEntryUsagePersistenceImpl
 	}
 
 	/**
-	 * Returns the asset list entry usage with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the asset list entry usage
-	 * @return the asset list entry usage
-	 * @throws NoSuchEntryUsageException if a asset list entry usage with the primary key could not be found
-	 */
-	@Override
-	public AssetListEntryUsage findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEntryUsageException {
-
-		AssetListEntryUsage assetListEntryUsage = fetchByPrimaryKey(primaryKey);
-
-		if (assetListEntryUsage == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEntryUsageException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return assetListEntryUsage;
-	}
-
-	/**
 	 * Returns the asset list entry usage with the primary key or throws a <code>NoSuchEntryUsageException</code> if it could not be found.
 	 *
 	 * @param assetListEntryUsageId the primary key of the asset list entry usage
@@ -2126,53 +2014,9 @@ public class AssetListEntryUsagePersistenceImpl
 		return findByPrimaryKey((Serializable)assetListEntryUsageId);
 	}
 
-	/**
-	 * Returns the asset list entry usage with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the asset list entry usage
-	 * @return the asset list entry usage, or <code>null</code> if a asset list entry usage with the primary key could not be found
-	 */
 	@Override
-	public AssetListEntryUsage fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				AssetListEntryUsage.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		AssetListEntryUsage assetListEntryUsage =
-			(AssetListEntryUsage)entityCache.getResult(
-				AssetListEntryUsageImpl.class, primaryKey);
-
-		if (assetListEntryUsage != null) {
-			return assetListEntryUsage;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			assetListEntryUsage = (AssetListEntryUsage)session.get(
-				AssetListEntryUsageImpl.class, primaryKey);
-
-			if (assetListEntryUsage != null) {
-				cacheResult(assetListEntryUsage);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return assetListEntryUsage;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -2184,135 +2028,6 @@ public class AssetListEntryUsagePersistenceImpl
 	@Override
 	public AssetListEntryUsage fetchByPrimaryKey(long assetListEntryUsageId) {
 		return fetchByPrimaryKey((Serializable)assetListEntryUsageId);
-	}
-
-	@Override
-	public Map<Serializable, AssetListEntryUsage> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(AssetListEntryUsage.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, AssetListEntryUsage> map =
-			new HashMap<Serializable, AssetListEntryUsage>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			AssetListEntryUsage assetListEntryUsage = fetchByPrimaryKey(
-				primaryKey);
-
-			if (assetListEntryUsage != null) {
-				map.put(primaryKey, assetListEntryUsage);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						AssetListEntryUsage.class, primaryKey)) {
-
-				AssetListEntryUsage assetListEntryUsage =
-					(AssetListEntryUsage)entityCache.getResult(
-						AssetListEntryUsageImpl.class, primaryKey);
-
-				if (assetListEntryUsage == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, assetListEntryUsage);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (AssetListEntryUsage assetListEntryUsage :
-					(List<AssetListEntryUsage>)query.list()) {
-
-				map.put(
-					assetListEntryUsage.getPrimaryKeyObj(),
-					assetListEntryUsage);
-
-				cacheResult(assetListEntryUsage);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -3034,9 +2749,6 @@ public class AssetListEntryUsagePersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "assetListEntryUsage.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No AssetListEntryUsage exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No AssetListEntryUsage exists with the key {";
 
@@ -3052,4 +2764,4 @@ public class AssetListEntryUsagePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1086929248
+// LIFERAY-SERVICE-BUILDER-HASH:1233233058

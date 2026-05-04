@@ -30,6 +30,7 @@ import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.persistence.LayoutPrototypePersistence;
 import com.liferay.portal.kernel.service.persistence.LayoutPrototypeUtil;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -55,7 +56,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -72,7 +72,7 @@ import java.util.Set;
  * @generated
  */
 public class LayoutPrototypePersistenceImpl
-	extends BasePersistenceImpl<LayoutPrototype>
+	extends BasePersistenceImpl<LayoutPrototype, NoSuchLayoutPrototypeException>
 	implements LayoutPrototypePersistence {
 
 	/*
@@ -1709,50 +1709,6 @@ public class LayoutPrototypePersistenceImpl
 	}
 
 	/**
-	 * Clears the cache for all layout prototypes.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(LayoutPrototypeImpl.class);
-
-		FinderCacheUtil.clearCache(LayoutPrototypeImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the layout prototype.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(LayoutPrototype layoutPrototype) {
-		EntityCacheUtil.removeResult(
-			LayoutPrototypeImpl.class, layoutPrototype);
-	}
-
-	@Override
-	public void clearCache(List<LayoutPrototype> layoutPrototypes) {
-		for (LayoutPrototype layoutPrototype : layoutPrototypes) {
-			EntityCacheUtil.removeResult(
-				LayoutPrototypeImpl.class, layoutPrototype);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(LayoutPrototypeImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(LayoutPrototypeImpl.class, primaryKey);
-		}
-	}
-
-	/**
 	 * Creates a new layout prototype with the primary key. Does not add the layout prototype to the database.
 	 *
 	 * @param layoutPrototypeId the primary key for the new layout prototype
@@ -1786,47 +1742,6 @@ public class LayoutPrototypePersistenceImpl
 		throws NoSuchLayoutPrototypeException {
 
 		return remove((Serializable)layoutPrototypeId);
-	}
-
-	/**
-	 * Removes the layout prototype with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the layout prototype
-	 * @return the layout prototype that was removed
-	 * @throws NoSuchLayoutPrototypeException if a layout prototype with the primary key could not be found
-	 */
-	@Override
-	public LayoutPrototype remove(Serializable primaryKey)
-		throws NoSuchLayoutPrototypeException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			LayoutPrototype layoutPrototype = (LayoutPrototype)session.get(
-				LayoutPrototypeImpl.class, primaryKey);
-
-			if (layoutPrototype == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchLayoutPrototypeException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(layoutPrototype);
-		}
-		catch (NoSuchLayoutPrototypeException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1956,31 +1871,6 @@ public class LayoutPrototypePersistenceImpl
 	}
 
 	/**
-	 * Returns the layout prototype with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the layout prototype
-	 * @return the layout prototype
-	 * @throws NoSuchLayoutPrototypeException if a layout prototype with the primary key could not be found
-	 */
-	@Override
-	public LayoutPrototype findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchLayoutPrototypeException {
-
-		LayoutPrototype layoutPrototype = fetchByPrimaryKey(primaryKey);
-
-		if (layoutPrototype == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchLayoutPrototypeException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return layoutPrototype;
-	}
-
-	/**
 	 * Returns the layout prototype with the primary key or throws a <code>NoSuchLayoutPrototypeException</code> if it could not be found.
 	 *
 	 * @param layoutPrototypeId the primary key of the layout prototype
@@ -1994,53 +1884,9 @@ public class LayoutPrototypePersistenceImpl
 		return findByPrimaryKey((Serializable)layoutPrototypeId);
 	}
 
-	/**
-	 * Returns the layout prototype with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the layout prototype
-	 * @return the layout prototype, or <code>null</code> if a layout prototype with the primary key could not be found
-	 */
 	@Override
-	public LayoutPrototype fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				LayoutPrototype.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		LayoutPrototype layoutPrototype =
-			(LayoutPrototype)EntityCacheUtil.getResult(
-				LayoutPrototypeImpl.class, primaryKey);
-
-		if (layoutPrototype != null) {
-			return layoutPrototype;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			layoutPrototype = (LayoutPrototype)session.get(
-				LayoutPrototypeImpl.class, primaryKey);
-
-			if (layoutPrototype != null) {
-				cacheResult(layoutPrototype);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return layoutPrototype;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -2052,132 +1898,6 @@ public class LayoutPrototypePersistenceImpl
 	@Override
 	public LayoutPrototype fetchByPrimaryKey(long layoutPrototypeId) {
 		return fetchByPrimaryKey((Serializable)layoutPrototypeId);
-	}
-
-	@Override
-	public Map<Serializable, LayoutPrototype> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(LayoutPrototype.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, LayoutPrototype> map =
-			new HashMap<Serializable, LayoutPrototype>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			LayoutPrototype layoutPrototype = fetchByPrimaryKey(primaryKey);
-
-			if (layoutPrototype != null) {
-				map.put(primaryKey, layoutPrototype);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						LayoutPrototype.class, primaryKey)) {
-
-				LayoutPrototype layoutPrototype =
-					(LayoutPrototype)EntityCacheUtil.getResult(
-						LayoutPrototypeImpl.class, primaryKey);
-
-				if (layoutPrototype == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, layoutPrototype);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (LayoutPrototype layoutPrototype :
-					(List<LayoutPrototype>)query.list()) {
-
-				map.put(layoutPrototype.getPrimaryKeyObj(), layoutPrototype);
-
-				cacheResult(layoutPrototype);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2644,9 +2364,6 @@ public class LayoutPrototypePersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "LayoutPrototype.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No LayoutPrototype exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No LayoutPrototype exists with the key {";
 
@@ -2662,4 +2379,4 @@ public class LayoutPrototypePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1839370425
+// LIFERAY-SERVICE-BUILDER-HASH:-1204106205

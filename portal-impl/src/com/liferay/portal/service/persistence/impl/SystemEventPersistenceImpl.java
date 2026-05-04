@@ -27,6 +27,7 @@ import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.persistence.SystemEventPersistence;
 import com.liferay.portal.kernel.service.persistence.SystemEventUtil;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -50,7 +51,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -66,7 +66,8 @@ import java.util.Set;
  * @generated
  */
 public class SystemEventPersistenceImpl
-	extends BasePersistenceImpl<SystemEvent> implements SystemEventPersistence {
+	extends BasePersistenceImpl<SystemEvent, NoSuchSystemEventException>
+	implements SystemEventPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -859,48 +860,6 @@ public class SystemEventPersistenceImpl
 	}
 
 	/**
-	 * Clears the cache for all system events.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(SystemEventImpl.class);
-
-		FinderCacheUtil.clearCache(SystemEventImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the system event.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(SystemEvent systemEvent) {
-		EntityCacheUtil.removeResult(SystemEventImpl.class, systemEvent);
-	}
-
-	@Override
-	public void clearCache(List<SystemEvent> systemEvents) {
-		for (SystemEvent systemEvent : systemEvents) {
-			EntityCacheUtil.removeResult(SystemEventImpl.class, systemEvent);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(SystemEventImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(SystemEventImpl.class, primaryKey);
-		}
-	}
-
-	/**
 	 * Creates a new system event with the primary key. Does not add the system event to the database.
 	 *
 	 * @param systemEventId the primary key for the new system event
@@ -930,47 +889,6 @@ public class SystemEventPersistenceImpl
 		throws NoSuchSystemEventException {
 
 		return remove((Serializable)systemEventId);
-	}
-
-	/**
-	 * Removes the system event with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the system event
-	 * @return the system event that was removed
-	 * @throws NoSuchSystemEventException if a system event with the primary key could not be found
-	 */
-	@Override
-	public SystemEvent remove(Serializable primaryKey)
-		throws NoSuchSystemEventException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			SystemEvent systemEvent = (SystemEvent)session.get(
-				SystemEventImpl.class, primaryKey);
-
-			if (systemEvent == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchSystemEventException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(systemEvent);
-		}
-		catch (NoSuchSystemEventException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1079,31 +997,6 @@ public class SystemEventPersistenceImpl
 	}
 
 	/**
-	 * Returns the system event with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the system event
-	 * @return the system event
-	 * @throws NoSuchSystemEventException if a system event with the primary key could not be found
-	 */
-	@Override
-	public SystemEvent findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchSystemEventException {
-
-		SystemEvent systemEvent = fetchByPrimaryKey(primaryKey);
-
-		if (systemEvent == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchSystemEventException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return systemEvent;
-	}
-
-	/**
 	 * Returns the system event with the primary key or throws a <code>NoSuchSystemEventException</code> if it could not be found.
 	 *
 	 * @param systemEventId the primary key of the system event
@@ -1117,52 +1010,9 @@ public class SystemEventPersistenceImpl
 		return findByPrimaryKey((Serializable)systemEventId);
 	}
 
-	/**
-	 * Returns the system event with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the system event
-	 * @return the system event, or <code>null</code> if a system event with the primary key could not be found
-	 */
 	@Override
-	public SystemEvent fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				SystemEvent.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		SystemEvent systemEvent = (SystemEvent)EntityCacheUtil.getResult(
-			SystemEventImpl.class, primaryKey);
-
-		if (systemEvent != null) {
-			return systemEvent;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			systemEvent = (SystemEvent)session.get(
-				SystemEventImpl.class, primaryKey);
-
-			if (systemEvent != null) {
-				cacheResult(systemEvent);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return systemEvent;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -1174,130 +1024,6 @@ public class SystemEventPersistenceImpl
 	@Override
 	public SystemEvent fetchByPrimaryKey(long systemEventId) {
 		return fetchByPrimaryKey((Serializable)systemEventId);
-	}
-
-	@Override
-	public Map<Serializable, SystemEvent> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(SystemEvent.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, SystemEvent> map =
-			new HashMap<Serializable, SystemEvent>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			SystemEvent systemEvent = fetchByPrimaryKey(primaryKey);
-
-			if (systemEvent != null) {
-				map.put(primaryKey, systemEvent);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						SystemEvent.class, primaryKey)) {
-
-				SystemEvent systemEvent =
-					(SystemEvent)EntityCacheUtil.getResult(
-						SystemEventImpl.class, primaryKey);
-
-				if (systemEvent == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, systemEvent);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (SystemEvent systemEvent : (List<SystemEvent>)query.list()) {
-				map.put(systemEvent.getPrimaryKeyObj(), systemEvent);
-
-				cacheResult(systemEvent);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1762,9 +1488,6 @@ public class SystemEventPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "systemEvent.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No SystemEvent exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No SystemEvent exists with the key {";
 
@@ -1780,4 +1503,4 @@ public class SystemEventPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1784643704
+// LIFERAY-SERVICE-BUILDER-HASH:1397039967

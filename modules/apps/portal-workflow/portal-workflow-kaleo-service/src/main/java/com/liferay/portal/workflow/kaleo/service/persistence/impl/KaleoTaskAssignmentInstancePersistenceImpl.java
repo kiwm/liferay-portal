@@ -48,9 +48,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -74,7 +72,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = KaleoTaskAssignmentInstancePersistence.class)
 public class KaleoTaskAssignmentInstancePersistenceImpl
-	extends BasePersistenceImpl<KaleoTaskAssignmentInstance>
+	extends BasePersistenceImpl
+		<KaleoTaskAssignmentInstance, NoSuchTaskAssignmentInstanceException>
 	implements KaleoTaskAssignmentInstancePersistence {
 
 	/*
@@ -1520,58 +1519,6 @@ public class KaleoTaskAssignmentInstancePersistenceImpl
 	}
 
 	/**
-	 * Clears the cache for all kaleo task assignment instances.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(KaleoTaskAssignmentInstanceImpl.class);
-
-		finderCache.clearCache(KaleoTaskAssignmentInstanceImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the kaleo task assignment instance.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(
-		KaleoTaskAssignmentInstance kaleoTaskAssignmentInstance) {
-
-		entityCache.removeResult(
-			KaleoTaskAssignmentInstanceImpl.class, kaleoTaskAssignmentInstance);
-	}
-
-	@Override
-	public void clearCache(
-		List<KaleoTaskAssignmentInstance> kaleoTaskAssignmentInstances) {
-
-		for (KaleoTaskAssignmentInstance kaleoTaskAssignmentInstance :
-				kaleoTaskAssignmentInstances) {
-
-			entityCache.removeResult(
-				KaleoTaskAssignmentInstanceImpl.class,
-				kaleoTaskAssignmentInstance);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(KaleoTaskAssignmentInstanceImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				KaleoTaskAssignmentInstanceImpl.class, primaryKey);
-		}
-	}
-
-	/**
 	 * Creates a new kaleo task assignment instance with the primary key. Does not add the kaleo task assignment instance to the database.
 	 *
 	 * @param kaleoTaskAssignmentInstanceId the primary key for the new kaleo task assignment instance
@@ -1607,48 +1554,6 @@ public class KaleoTaskAssignmentInstancePersistenceImpl
 		throws NoSuchTaskAssignmentInstanceException {
 
 		return remove((Serializable)kaleoTaskAssignmentInstanceId);
-	}
-
-	/**
-	 * Removes the kaleo task assignment instance with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the kaleo task assignment instance
-	 * @return the kaleo task assignment instance that was removed
-	 * @throws NoSuchTaskAssignmentInstanceException if a kaleo task assignment instance with the primary key could not be found
-	 */
-	@Override
-	public KaleoTaskAssignmentInstance remove(Serializable primaryKey)
-		throws NoSuchTaskAssignmentInstanceException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			KaleoTaskAssignmentInstance kaleoTaskAssignmentInstance =
-				(KaleoTaskAssignmentInstance)session.get(
-					KaleoTaskAssignmentInstanceImpl.class, primaryKey);
-
-			if (kaleoTaskAssignmentInstance == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchTaskAssignmentInstanceException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(kaleoTaskAssignmentInstance);
-		}
-		catch (NoSuchTaskAssignmentInstanceException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1785,32 +1690,6 @@ public class KaleoTaskAssignmentInstancePersistenceImpl
 	}
 
 	/**
-	 * Returns the kaleo task assignment instance with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kaleo task assignment instance
-	 * @return the kaleo task assignment instance
-	 * @throws NoSuchTaskAssignmentInstanceException if a kaleo task assignment instance with the primary key could not be found
-	 */
-	@Override
-	public KaleoTaskAssignmentInstance findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchTaskAssignmentInstanceException {
-
-		KaleoTaskAssignmentInstance kaleoTaskAssignmentInstance =
-			fetchByPrimaryKey(primaryKey);
-
-		if (kaleoTaskAssignmentInstance == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchTaskAssignmentInstanceException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return kaleoTaskAssignmentInstance;
-	}
-
-	/**
 	 * Returns the kaleo task assignment instance with the primary key or throws a <code>NoSuchTaskAssignmentInstanceException</code> if it could not be found.
 	 *
 	 * @param kaleoTaskAssignmentInstanceId the primary key of the kaleo task assignment instance
@@ -1825,56 +1704,9 @@ public class KaleoTaskAssignmentInstancePersistenceImpl
 		return findByPrimaryKey((Serializable)kaleoTaskAssignmentInstanceId);
 	}
 
-	/**
-	 * Returns the kaleo task assignment instance with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the kaleo task assignment instance
-	 * @return the kaleo task assignment instance, or <code>null</code> if a kaleo task assignment instance with the primary key could not be found
-	 */
 	@Override
-	public KaleoTaskAssignmentInstance fetchByPrimaryKey(
-		Serializable primaryKey) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				KaleoTaskAssignmentInstance.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		KaleoTaskAssignmentInstance kaleoTaskAssignmentInstance =
-			(KaleoTaskAssignmentInstance)entityCache.getResult(
-				KaleoTaskAssignmentInstanceImpl.class, primaryKey);
-
-		if (kaleoTaskAssignmentInstance != null) {
-			return kaleoTaskAssignmentInstance;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			kaleoTaskAssignmentInstance =
-				(KaleoTaskAssignmentInstance)session.get(
-					KaleoTaskAssignmentInstanceImpl.class, primaryKey);
-
-			if (kaleoTaskAssignmentInstance != null) {
-				cacheResult(kaleoTaskAssignmentInstance);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return kaleoTaskAssignmentInstance;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1888,137 +1720,6 @@ public class KaleoTaskAssignmentInstancePersistenceImpl
 		long kaleoTaskAssignmentInstanceId) {
 
 		return fetchByPrimaryKey((Serializable)kaleoTaskAssignmentInstanceId);
-	}
-
-	@Override
-	public Map<Serializable, KaleoTaskAssignmentInstance> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				KaleoTaskAssignmentInstance.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, KaleoTaskAssignmentInstance> map =
-			new HashMap<Serializable, KaleoTaskAssignmentInstance>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			KaleoTaskAssignmentInstance kaleoTaskAssignmentInstance =
-				fetchByPrimaryKey(primaryKey);
-
-			if (kaleoTaskAssignmentInstance != null) {
-				map.put(primaryKey, kaleoTaskAssignmentInstance);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						KaleoTaskAssignmentInstance.class, primaryKey)) {
-
-				KaleoTaskAssignmentInstance kaleoTaskAssignmentInstance =
-					(KaleoTaskAssignmentInstance)entityCache.getResult(
-						KaleoTaskAssignmentInstanceImpl.class, primaryKey);
-
-				if (kaleoTaskAssignmentInstance == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, kaleoTaskAssignmentInstance);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (KaleoTaskAssignmentInstance kaleoTaskAssignmentInstance :
-					(List<KaleoTaskAssignmentInstance>)query.list()) {
-
-				map.put(
-					kaleoTaskAssignmentInstance.getPrimaryKeyObj(),
-					kaleoTaskAssignmentInstance);
-
-				cacheResult(kaleoTaskAssignmentInstance);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2670,9 +2371,6 @@ public class KaleoTaskAssignmentInstancePersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"kaleoTaskAssignmentInstance.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No KaleoTaskAssignmentInstance exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No KaleoTaskAssignmentInstance exists with the key {";
 
@@ -2685,4 +2383,4 @@ public class KaleoTaskAssignmentInstancePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1733703213
+// LIFERAY-SERVICE-BUILDER-HASH:1218885547

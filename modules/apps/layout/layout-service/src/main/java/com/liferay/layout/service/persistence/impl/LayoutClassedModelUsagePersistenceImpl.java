@@ -55,7 +55,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -80,7 +79,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = LayoutClassedModelUsagePersistence.class)
 public class LayoutClassedModelUsagePersistenceImpl
-	extends BasePersistenceImpl<LayoutClassedModelUsage>
+	extends BasePersistenceImpl
+		<LayoutClassedModelUsage, NoSuchLayoutClassedModelUsageException>
 	implements LayoutClassedModelUsagePersistence {
 
 	/*
@@ -3704,55 +3704,6 @@ public class LayoutClassedModelUsagePersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all layout classed model usages.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(LayoutClassedModelUsageImpl.class);
-
-		finderCache.clearCache(LayoutClassedModelUsageImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the layout classed model usage.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(LayoutClassedModelUsage layoutClassedModelUsage) {
-		entityCache.removeResult(
-			LayoutClassedModelUsageImpl.class, layoutClassedModelUsage);
-	}
-
-	@Override
-	public void clearCache(
-		List<LayoutClassedModelUsage> layoutClassedModelUsages) {
-
-		for (LayoutClassedModelUsage layoutClassedModelUsage :
-				layoutClassedModelUsages) {
-
-			entityCache.removeResult(
-				LayoutClassedModelUsageImpl.class, layoutClassedModelUsage);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(LayoutClassedModelUsageImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				LayoutClassedModelUsageImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		LayoutClassedModelUsageModelImpl layoutClassedModelUsageModelImpl) {
 
@@ -3821,48 +3772,6 @@ public class LayoutClassedModelUsagePersistenceImpl
 		throws NoSuchLayoutClassedModelUsageException {
 
 		return remove((Serializable)layoutClassedModelUsageId);
-	}
-
-	/**
-	 * Removes the layout classed model usage with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the layout classed model usage
-	 * @return the layout classed model usage that was removed
-	 * @throws NoSuchLayoutClassedModelUsageException if a layout classed model usage with the primary key could not be found
-	 */
-	@Override
-	public LayoutClassedModelUsage remove(Serializable primaryKey)
-		throws NoSuchLayoutClassedModelUsageException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			LayoutClassedModelUsage layoutClassedModelUsage =
-				(LayoutClassedModelUsage)session.get(
-					LayoutClassedModelUsageImpl.class, primaryKey);
-
-			if (layoutClassedModelUsage == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchLayoutClassedModelUsageException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(layoutClassedModelUsage);
-		}
-		catch (NoSuchLayoutClassedModelUsageException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -4002,32 +3911,6 @@ public class LayoutClassedModelUsagePersistenceImpl
 	}
 
 	/**
-	 * Returns the layout classed model usage with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the layout classed model usage
-	 * @return the layout classed model usage
-	 * @throws NoSuchLayoutClassedModelUsageException if a layout classed model usage with the primary key could not be found
-	 */
-	@Override
-	public LayoutClassedModelUsage findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchLayoutClassedModelUsageException {
-
-		LayoutClassedModelUsage layoutClassedModelUsage = fetchByPrimaryKey(
-			primaryKey);
-
-		if (layoutClassedModelUsage == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchLayoutClassedModelUsageException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return layoutClassedModelUsage;
-	}
-
-	/**
 	 * Returns the layout classed model usage with the primary key or throws a <code>NoSuchLayoutClassedModelUsageException</code> if it could not be found.
 	 *
 	 * @param layoutClassedModelUsageId the primary key of the layout classed model usage
@@ -4042,53 +3925,9 @@ public class LayoutClassedModelUsagePersistenceImpl
 		return findByPrimaryKey((Serializable)layoutClassedModelUsageId);
 	}
 
-	/**
-	 * Returns the layout classed model usage with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the layout classed model usage
-	 * @return the layout classed model usage, or <code>null</code> if a layout classed model usage with the primary key could not be found
-	 */
 	@Override
-	public LayoutClassedModelUsage fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				LayoutClassedModelUsage.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		LayoutClassedModelUsage layoutClassedModelUsage =
-			(LayoutClassedModelUsage)entityCache.getResult(
-				LayoutClassedModelUsageImpl.class, primaryKey);
-
-		if (layoutClassedModelUsage != null) {
-			return layoutClassedModelUsage;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			layoutClassedModelUsage = (LayoutClassedModelUsage)session.get(
-				LayoutClassedModelUsageImpl.class, primaryKey);
-
-			if (layoutClassedModelUsage != null) {
-				cacheResult(layoutClassedModelUsage);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return layoutClassedModelUsage;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -4102,137 +3941,6 @@ public class LayoutClassedModelUsagePersistenceImpl
 		long layoutClassedModelUsageId) {
 
 		return fetchByPrimaryKey((Serializable)layoutClassedModelUsageId);
-	}
-
-	@Override
-	public Map<Serializable, LayoutClassedModelUsage> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				LayoutClassedModelUsage.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, LayoutClassedModelUsage> map =
-			new HashMap<Serializable, LayoutClassedModelUsage>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			LayoutClassedModelUsage layoutClassedModelUsage = fetchByPrimaryKey(
-				primaryKey);
-
-			if (layoutClassedModelUsage != null) {
-				map.put(primaryKey, layoutClassedModelUsage);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						LayoutClassedModelUsage.class, primaryKey)) {
-
-				LayoutClassedModelUsage layoutClassedModelUsage =
-					(LayoutClassedModelUsage)entityCache.getResult(
-						LayoutClassedModelUsageImpl.class, primaryKey);
-
-				if (layoutClassedModelUsage == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, layoutClassedModelUsage);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (LayoutClassedModelUsage layoutClassedModelUsage :
-					(List<LayoutClassedModelUsage>)query.list()) {
-
-				map.put(
-					layoutClassedModelUsage.getPrimaryKeyObj(),
-					layoutClassedModelUsage);
-
-				cacheResult(layoutClassedModelUsage);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -4932,9 +4640,6 @@ public class LayoutClassedModelUsagePersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"layoutClassedModelUsage.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No LayoutClassedModelUsage exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No LayoutClassedModelUsage exists with the key {";
 
@@ -4950,4 +4655,4 @@ public class LayoutClassedModelUsagePersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1426798266
+// LIFERAY-SERVICE-BUILDER-HASH:350661772

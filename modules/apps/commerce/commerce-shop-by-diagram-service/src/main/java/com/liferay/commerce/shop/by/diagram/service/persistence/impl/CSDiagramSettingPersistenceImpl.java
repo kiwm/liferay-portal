@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = CSDiagramSettingPersistence.class)
 public class CSDiagramSettingPersistenceImpl
-	extends BasePersistenceImpl<CSDiagramSetting>
+	extends BasePersistenceImpl
+		<CSDiagramSetting, NoSuchCSDiagramSettingException>
 	implements CSDiagramSettingPersistence {
 
 	/*
@@ -580,49 +580,6 @@ public class CSDiagramSettingPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all cs diagram settings.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(CSDiagramSettingImpl.class);
-
-		finderCache.clearCache(CSDiagramSettingImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the cs diagram setting.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(CSDiagramSetting csDiagramSetting) {
-		entityCache.removeResult(CSDiagramSettingImpl.class, csDiagramSetting);
-	}
-
-	@Override
-	public void clearCache(List<CSDiagramSetting> csDiagramSettings) {
-		for (CSDiagramSetting csDiagramSetting : csDiagramSettings) {
-			entityCache.removeResult(
-				CSDiagramSettingImpl.class, csDiagramSetting);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(CSDiagramSettingImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(CSDiagramSettingImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		CSDiagramSettingModelImpl csDiagramSettingModelImpl) {
 
@@ -674,47 +631,6 @@ public class CSDiagramSettingPersistenceImpl
 		throws NoSuchCSDiagramSettingException {
 
 		return remove((Serializable)CSDiagramSettingId);
-	}
-
-	/**
-	 * Removes the cs diagram setting with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the cs diagram setting
-	 * @return the cs diagram setting that was removed
-	 * @throws NoSuchCSDiagramSettingException if a cs diagram setting with the primary key could not be found
-	 */
-	@Override
-	public CSDiagramSetting remove(Serializable primaryKey)
-		throws NoSuchCSDiagramSettingException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			CSDiagramSetting csDiagramSetting = (CSDiagramSetting)session.get(
-				CSDiagramSettingImpl.class, primaryKey);
-
-			if (csDiagramSetting == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchCSDiagramSettingException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(csDiagramSetting);
-		}
-		catch (NoSuchCSDiagramSettingException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -846,31 +762,6 @@ public class CSDiagramSettingPersistenceImpl
 	}
 
 	/**
-	 * Returns the cs diagram setting with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cs diagram setting
-	 * @return the cs diagram setting
-	 * @throws NoSuchCSDiagramSettingException if a cs diagram setting with the primary key could not be found
-	 */
-	@Override
-	public CSDiagramSetting findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchCSDiagramSettingException {
-
-		CSDiagramSetting csDiagramSetting = fetchByPrimaryKey(primaryKey);
-
-		if (csDiagramSetting == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchCSDiagramSettingException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return csDiagramSetting;
-	}
-
-	/**
 	 * Returns the cs diagram setting with the primary key or throws a <code>NoSuchCSDiagramSettingException</code> if it could not be found.
 	 *
 	 * @param CSDiagramSettingId the primary key of the cs diagram setting
@@ -884,53 +775,9 @@ public class CSDiagramSettingPersistenceImpl
 		return findByPrimaryKey((Serializable)CSDiagramSettingId);
 	}
 
-	/**
-	 * Returns the cs diagram setting with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the cs diagram setting
-	 * @return the cs diagram setting, or <code>null</code> if a cs diagram setting with the primary key could not be found
-	 */
 	@Override
-	public CSDiagramSetting fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				CSDiagramSetting.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		CSDiagramSetting csDiagramSetting =
-			(CSDiagramSetting)entityCache.getResult(
-				CSDiagramSettingImpl.class, primaryKey);
-
-		if (csDiagramSetting != null) {
-			return csDiagramSetting;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			csDiagramSetting = (CSDiagramSetting)session.get(
-				CSDiagramSettingImpl.class, primaryKey);
-
-			if (csDiagramSetting != null) {
-				cacheResult(csDiagramSetting);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return csDiagramSetting;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -942,132 +789,6 @@ public class CSDiagramSettingPersistenceImpl
 	@Override
 	public CSDiagramSetting fetchByPrimaryKey(long CSDiagramSettingId) {
 		return fetchByPrimaryKey((Serializable)CSDiagramSettingId);
-	}
-
-	@Override
-	public Map<Serializable, CSDiagramSetting> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(CSDiagramSetting.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, CSDiagramSetting> map =
-			new HashMap<Serializable, CSDiagramSetting>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			CSDiagramSetting csDiagramSetting = fetchByPrimaryKey(primaryKey);
-
-			if (csDiagramSetting != null) {
-				map.put(primaryKey, csDiagramSetting);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						CSDiagramSetting.class, primaryKey)) {
-
-				CSDiagramSetting csDiagramSetting =
-					(CSDiagramSetting)entityCache.getResult(
-						CSDiagramSettingImpl.class, primaryKey);
-
-				if (csDiagramSetting == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, csDiagramSetting);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (CSDiagramSetting csDiagramSetting :
-					(List<CSDiagramSetting>)query.list()) {
-
-				map.put(csDiagramSetting.getPrimaryKeyObj(), csDiagramSetting);
-
-				cacheResult(csDiagramSetting);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1506,9 +1227,6 @@ public class CSDiagramSettingPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "csDiagramSetting.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No CSDiagramSetting exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No CSDiagramSetting exists with the key {";
 
@@ -1524,4 +1242,4 @@ public class CSDiagramSettingPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-542555142
+// LIFERAY-SERVICE-BUILDER-HASH:817102050

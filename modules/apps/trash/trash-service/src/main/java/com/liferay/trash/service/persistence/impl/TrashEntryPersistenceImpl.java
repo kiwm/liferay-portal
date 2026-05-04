@@ -49,9 +49,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,7 +73,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = TrashEntryPersistence.class)
 public class TrashEntryPersistenceImpl
-	extends BasePersistenceImpl<TrashEntry> implements TrashEntryPersistence {
+	extends BasePersistenceImpl<TrashEntry, NoSuchEntryException>
+	implements TrashEntryPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -1067,48 +1066,6 @@ public class TrashEntryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all trash entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(TrashEntryImpl.class);
-
-		finderCache.clearCache(TrashEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the trash entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(TrashEntry trashEntry) {
-		entityCache.removeResult(TrashEntryImpl.class, trashEntry);
-	}
-
-	@Override
-	public void clearCache(List<TrashEntry> trashEntries) {
-		for (TrashEntry trashEntry : trashEntries) {
-			entityCache.removeResult(TrashEntryImpl.class, trashEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(TrashEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(TrashEntryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		TrashEntryModelImpl trashEntryModelImpl) {
 
@@ -1154,47 +1111,6 @@ public class TrashEntryPersistenceImpl
 	@Override
 	public TrashEntry remove(long entryId) throws NoSuchEntryException {
 		return remove((Serializable)entryId);
-	}
-
-	/**
-	 * Removes the trash entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the trash entry
-	 * @return the trash entry that was removed
-	 * @throws NoSuchEntryException if a trash entry with the primary key could not be found
-	 */
-	@Override
-	public TrashEntry remove(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			TrashEntry trashEntry = (TrashEntry)session.get(
-				TrashEntryImpl.class, primaryKey);
-
-			if (trashEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(trashEntry);
-		}
-		catch (NoSuchEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1305,31 +1221,6 @@ public class TrashEntryPersistenceImpl
 	}
 
 	/**
-	 * Returns the trash entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the trash entry
-	 * @return the trash entry
-	 * @throws NoSuchEntryException if a trash entry with the primary key could not be found
-	 */
-	@Override
-	public TrashEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		TrashEntry trashEntry = fetchByPrimaryKey(primaryKey);
-
-		if (trashEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return trashEntry;
-	}
-
-	/**
 	 * Returns the trash entry with the primary key or throws a <code>NoSuchEntryException</code> if it could not be found.
 	 *
 	 * @param entryId the primary key of the trash entry
@@ -1343,52 +1234,9 @@ public class TrashEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)entryId);
 	}
 
-	/**
-	 * Returns the trash entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the trash entry
-	 * @return the trash entry, or <code>null</code> if a trash entry with the primary key could not be found
-	 */
 	@Override
-	public TrashEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				TrashEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		TrashEntry trashEntry = (TrashEntry)entityCache.getResult(
-			TrashEntryImpl.class, primaryKey);
-
-		if (trashEntry != null) {
-			return trashEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			trashEntry = (TrashEntry)session.get(
-				TrashEntryImpl.class, primaryKey);
-
-			if (trashEntry != null) {
-				cacheResult(trashEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return trashEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1400,129 +1248,6 @@ public class TrashEntryPersistenceImpl
 	@Override
 	public TrashEntry fetchByPrimaryKey(long entryId) {
 		return fetchByPrimaryKey((Serializable)entryId);
-	}
-
-	@Override
-	public Map<Serializable, TrashEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(TrashEntry.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, TrashEntry> map =
-			new HashMap<Serializable, TrashEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			TrashEntry trashEntry = fetchByPrimaryKey(primaryKey);
-
-			if (trashEntry != null) {
-				map.put(primaryKey, trashEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						TrashEntry.class, primaryKey)) {
-
-				TrashEntry trashEntry = (TrashEntry)entityCache.getResult(
-					TrashEntryImpl.class, primaryKey);
-
-				if (trashEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, trashEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (TrashEntry trashEntry : (List<TrashEntry>)query.list()) {
-				map.put(trashEntry.getPrimaryKeyObj(), trashEntry);
-
-				cacheResult(trashEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2034,9 +1759,6 @@ public class TrashEntryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "trashEntry.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No TrashEntry exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No TrashEntry exists with the key {";
 
@@ -2049,4 +1771,4 @@ public class TrashEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:906613539
+// LIFERAY-SERVICE-BUILDER-HASH:579315855

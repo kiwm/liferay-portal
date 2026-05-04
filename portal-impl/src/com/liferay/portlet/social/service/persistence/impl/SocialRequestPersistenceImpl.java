@@ -20,6 +20,7 @@ import com.liferay.portal.kernel.dao.orm.Session;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -50,7 +51,6 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -66,7 +66,7 @@ import java.util.Set;
  * @generated
  */
 public class SocialRequestPersistenceImpl
-	extends BasePersistenceImpl<SocialRequest>
+	extends BasePersistenceImpl<SocialRequest, NoSuchRequestException>
 	implements SocialRequestPersistence {
 
 	/*
@@ -2129,49 +2129,6 @@ public class SocialRequestPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all social requests.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(SocialRequestImpl.class);
-
-		FinderCacheUtil.clearCache(SocialRequestImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the social request.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(SocialRequest socialRequest) {
-		EntityCacheUtil.removeResult(SocialRequestImpl.class, socialRequest);
-	}
-
-	@Override
-	public void clearCache(List<SocialRequest> socialRequests) {
-		for (SocialRequest socialRequest : socialRequests) {
-			EntityCacheUtil.removeResult(
-				SocialRequestImpl.class, socialRequest);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(SocialRequestImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(SocialRequestImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		SocialRequestModelImpl socialRequestModelImpl) {
 
@@ -2232,47 +2189,6 @@ public class SocialRequestPersistenceImpl
 	@Override
 	public SocialRequest remove(long requestId) throws NoSuchRequestException {
 		return remove((Serializable)requestId);
-	}
-
-	/**
-	 * Removes the social request with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the social request
-	 * @return the social request that was removed
-	 * @throws NoSuchRequestException if a social request with the primary key could not be found
-	 */
-	@Override
-	public SocialRequest remove(Serializable primaryKey)
-		throws NoSuchRequestException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			SocialRequest socialRequest = (SocialRequest)session.get(
-				SocialRequestImpl.class, primaryKey);
-
-			if (socialRequest == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchRequestException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(socialRequest);
-		}
-		catch (NoSuchRequestException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -2377,31 +2293,6 @@ public class SocialRequestPersistenceImpl
 	}
 
 	/**
-	 * Returns the social request with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the social request
-	 * @return the social request
-	 * @throws NoSuchRequestException if a social request with the primary key could not be found
-	 */
-	@Override
-	public SocialRequest findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchRequestException {
-
-		SocialRequest socialRequest = fetchByPrimaryKey(primaryKey);
-
-		if (socialRequest == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchRequestException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return socialRequest;
-	}
-
-	/**
 	 * Returns the social request with the primary key or throws a <code>NoSuchRequestException</code> if it could not be found.
 	 *
 	 * @param requestId the primary key of the social request
@@ -2415,52 +2306,9 @@ public class SocialRequestPersistenceImpl
 		return findByPrimaryKey((Serializable)requestId);
 	}
 
-	/**
-	 * Returns the social request with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the social request
-	 * @return the social request, or <code>null</code> if a social request with the primary key could not be found
-	 */
 	@Override
-	public SocialRequest fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				SocialRequest.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		SocialRequest socialRequest = (SocialRequest)EntityCacheUtil.getResult(
-			SocialRequestImpl.class, primaryKey);
-
-		if (socialRequest != null) {
-			return socialRequest;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			socialRequest = (SocialRequest)session.get(
-				SocialRequestImpl.class, primaryKey);
-
-			if (socialRequest != null) {
-				cacheResult(socialRequest);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return socialRequest;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -2472,132 +2320,6 @@ public class SocialRequestPersistenceImpl
 	@Override
 	public SocialRequest fetchByPrimaryKey(long requestId) {
 		return fetchByPrimaryKey((Serializable)requestId);
-	}
-
-	@Override
-	public Map<Serializable, SocialRequest> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(SocialRequest.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, SocialRequest> map =
-			new HashMap<Serializable, SocialRequest>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			SocialRequest socialRequest = fetchByPrimaryKey(primaryKey);
-
-			if (socialRequest != null) {
-				map.put(primaryKey, socialRequest);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						SocialRequest.class, primaryKey)) {
-
-				SocialRequest socialRequest =
-					(SocialRequest)EntityCacheUtil.getResult(
-						SocialRequestImpl.class, primaryKey);
-
-				if (socialRequest == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, socialRequest);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (SocialRequest socialRequest :
-					(List<SocialRequest>)query.list()) {
-
-				map.put(socialRequest.getPrimaryKeyObj(), socialRequest);
-
-				cacheResult(socialRequest);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -3327,9 +3049,6 @@ public class SocialRequestPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "socialRequest.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No SocialRequest exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No SocialRequest exists with the key {";
 
@@ -3345,4 +3064,4 @@ public class SocialRequestPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:1038956997
+// LIFERAY-SERVICE-BUILDER-HASH:-1380846353

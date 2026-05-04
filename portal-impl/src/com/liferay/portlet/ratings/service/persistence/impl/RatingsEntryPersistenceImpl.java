@@ -23,6 +23,7 @@ import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.security.auth.CompanyThreadLocal;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -55,7 +56,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -71,7 +71,7 @@ import java.util.Set;
  * @generated
  */
 public class RatingsEntryPersistenceImpl
-	extends BasePersistenceImpl<RatingsEntry>
+	extends BasePersistenceImpl<RatingsEntry, NoSuchEntryException>
 	implements RatingsEntryPersistence {
 
 	/*
@@ -1474,48 +1474,6 @@ public class RatingsEntryPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all ratings entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(RatingsEntryImpl.class);
-
-		FinderCacheUtil.clearCache(RatingsEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the ratings entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(RatingsEntry ratingsEntry) {
-		EntityCacheUtil.removeResult(RatingsEntryImpl.class, ratingsEntry);
-	}
-
-	@Override
-	public void clearCache(List<RatingsEntry> ratingsEntries) {
-		for (RatingsEntry ratingsEntry : ratingsEntries) {
-			EntityCacheUtil.removeResult(RatingsEntryImpl.class, ratingsEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(RatingsEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(RatingsEntryImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		RatingsEntryModelImpl ratingsEntryModelImpl) {
 
@@ -1566,47 +1524,6 @@ public class RatingsEntryPersistenceImpl
 	@Override
 	public RatingsEntry remove(long entryId) throws NoSuchEntryException {
 		return remove((Serializable)entryId);
-	}
-
-	/**
-	 * Removes the ratings entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the ratings entry
-	 * @return the ratings entry that was removed
-	 * @throws NoSuchEntryException if a ratings entry with the primary key could not be found
-	 */
-	@Override
-	public RatingsEntry remove(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			RatingsEntry ratingsEntry = (RatingsEntry)session.get(
-				RatingsEntryImpl.class, primaryKey);
-
-			if (ratingsEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(ratingsEntry);
-		}
-		catch (NoSuchEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1735,31 +1652,6 @@ public class RatingsEntryPersistenceImpl
 	}
 
 	/**
-	 * Returns the ratings entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ratings entry
-	 * @return the ratings entry
-	 * @throws NoSuchEntryException if a ratings entry with the primary key could not be found
-	 */
-	@Override
-	public RatingsEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		RatingsEntry ratingsEntry = fetchByPrimaryKey(primaryKey);
-
-		if (ratingsEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return ratingsEntry;
-	}
-
-	/**
 	 * Returns the ratings entry with the primary key or throws a <code>NoSuchEntryException</code> if it could not be found.
 	 *
 	 * @param entryId the primary key of the ratings entry
@@ -1773,52 +1665,9 @@ public class RatingsEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)entryId);
 	}
 
-	/**
-	 * Returns the ratings entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the ratings entry
-	 * @return the ratings entry, or <code>null</code> if a ratings entry with the primary key could not be found
-	 */
 	@Override
-	public RatingsEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				RatingsEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		RatingsEntry ratingsEntry = (RatingsEntry)EntityCacheUtil.getResult(
-			RatingsEntryImpl.class, primaryKey);
-
-		if (ratingsEntry != null) {
-			return ratingsEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ratingsEntry = (RatingsEntry)session.get(
-				RatingsEntryImpl.class, primaryKey);
-
-			if (ratingsEntry != null) {
-				cacheResult(ratingsEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return ratingsEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -1830,130 +1679,6 @@ public class RatingsEntryPersistenceImpl
 	@Override
 	public RatingsEntry fetchByPrimaryKey(long entryId) {
 		return fetchByPrimaryKey((Serializable)entryId);
-	}
-
-	@Override
-	public Map<Serializable, RatingsEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(RatingsEntry.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, RatingsEntry> map =
-			new HashMap<Serializable, RatingsEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			RatingsEntry ratingsEntry = fetchByPrimaryKey(primaryKey);
-
-			if (ratingsEntry != null) {
-				map.put(primaryKey, ratingsEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						RatingsEntry.class, primaryKey)) {
-
-				RatingsEntry ratingsEntry =
-					(RatingsEntry)EntityCacheUtil.getResult(
-						RatingsEntryImpl.class, primaryKey);
-
-				if (ratingsEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, ratingsEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (RatingsEntry ratingsEntry : (List<RatingsEntry>)query.list()) {
-				map.put(ratingsEntry.getPrimaryKeyObj(), ratingsEntry);
-
-				cacheResult(ratingsEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2443,9 +2168,6 @@ public class RatingsEntryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "ratingsEntry.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No RatingsEntry exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No RatingsEntry exists with the key {";
 
@@ -2461,4 +2183,4 @@ public class RatingsEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:729388513
+// LIFERAY-SERVICE-BUILDER-HASH:823520178

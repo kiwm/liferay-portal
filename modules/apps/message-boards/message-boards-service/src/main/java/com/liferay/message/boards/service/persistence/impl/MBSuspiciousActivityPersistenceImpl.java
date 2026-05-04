@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = MBSuspiciousActivityPersistence.class)
 public class MBSuspiciousActivityPersistenceImpl
-	extends BasePersistenceImpl<MBSuspiciousActivity>
+	extends BasePersistenceImpl
+		<MBSuspiciousActivity, NoSuchSuspiciousActivityException>
 	implements MBSuspiciousActivityPersistence {
 
 	/*
@@ -1119,53 +1119,6 @@ public class MBSuspiciousActivityPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all message boards suspicious activities.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(MBSuspiciousActivityImpl.class);
-
-		finderCache.clearCache(MBSuspiciousActivityImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the message boards suspicious activity.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(MBSuspiciousActivity mbSuspiciousActivity) {
-		entityCache.removeResult(
-			MBSuspiciousActivityImpl.class, mbSuspiciousActivity);
-	}
-
-	@Override
-	public void clearCache(List<MBSuspiciousActivity> mbSuspiciousActivities) {
-		for (MBSuspiciousActivity mbSuspiciousActivity :
-				mbSuspiciousActivities) {
-
-			entityCache.removeResult(
-				MBSuspiciousActivityImpl.class, mbSuspiciousActivity);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(MBSuspiciousActivityImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				MBSuspiciousActivityImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		MBSuspiciousActivityModelImpl mbSuspiciousActivityModelImpl) {
 
@@ -1234,48 +1187,6 @@ public class MBSuspiciousActivityPersistenceImpl
 		throws NoSuchSuspiciousActivityException {
 
 		return remove((Serializable)suspiciousActivityId);
-	}
-
-	/**
-	 * Removes the message boards suspicious activity with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the message boards suspicious activity
-	 * @return the message boards suspicious activity that was removed
-	 * @throws NoSuchSuspiciousActivityException if a message boards suspicious activity with the primary key could not be found
-	 */
-	@Override
-	public MBSuspiciousActivity remove(Serializable primaryKey)
-		throws NoSuchSuspiciousActivityException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			MBSuspiciousActivity mbSuspiciousActivity =
-				(MBSuspiciousActivity)session.get(
-					MBSuspiciousActivityImpl.class, primaryKey);
-
-			if (mbSuspiciousActivity == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchSuspiciousActivityException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(mbSuspiciousActivity);
-		}
-		catch (NoSuchSuspiciousActivityException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1412,32 +1323,6 @@ public class MBSuspiciousActivityPersistenceImpl
 	}
 
 	/**
-	 * Returns the message boards suspicious activity with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the message boards suspicious activity
-	 * @return the message boards suspicious activity
-	 * @throws NoSuchSuspiciousActivityException if a message boards suspicious activity with the primary key could not be found
-	 */
-	@Override
-	public MBSuspiciousActivity findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchSuspiciousActivityException {
-
-		MBSuspiciousActivity mbSuspiciousActivity = fetchByPrimaryKey(
-			primaryKey);
-
-		if (mbSuspiciousActivity == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchSuspiciousActivityException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return mbSuspiciousActivity;
-	}
-
-	/**
 	 * Returns the message boards suspicious activity with the primary key or throws a <code>NoSuchSuspiciousActivityException</code> if it could not be found.
 	 *
 	 * @param suspiciousActivityId the primary key of the message boards suspicious activity
@@ -1451,53 +1336,9 @@ public class MBSuspiciousActivityPersistenceImpl
 		return findByPrimaryKey((Serializable)suspiciousActivityId);
 	}
 
-	/**
-	 * Returns the message boards suspicious activity with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the message boards suspicious activity
-	 * @return the message boards suspicious activity, or <code>null</code> if a message boards suspicious activity with the primary key could not be found
-	 */
 	@Override
-	public MBSuspiciousActivity fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				MBSuspiciousActivity.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		MBSuspiciousActivity mbSuspiciousActivity =
-			(MBSuspiciousActivity)entityCache.getResult(
-				MBSuspiciousActivityImpl.class, primaryKey);
-
-		if (mbSuspiciousActivity != null) {
-			return mbSuspiciousActivity;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			mbSuspiciousActivity = (MBSuspiciousActivity)session.get(
-				MBSuspiciousActivityImpl.class, primaryKey);
-
-			if (mbSuspiciousActivity != null) {
-				cacheResult(mbSuspiciousActivity);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return mbSuspiciousActivity;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1509,135 +1350,6 @@ public class MBSuspiciousActivityPersistenceImpl
 	@Override
 	public MBSuspiciousActivity fetchByPrimaryKey(long suspiciousActivityId) {
 		return fetchByPrimaryKey((Serializable)suspiciousActivityId);
-	}
-
-	@Override
-	public Map<Serializable, MBSuspiciousActivity> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(MBSuspiciousActivity.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, MBSuspiciousActivity> map =
-			new HashMap<Serializable, MBSuspiciousActivity>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			MBSuspiciousActivity mbSuspiciousActivity = fetchByPrimaryKey(
-				primaryKey);
-
-			if (mbSuspiciousActivity != null) {
-				map.put(primaryKey, mbSuspiciousActivity);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						MBSuspiciousActivity.class, primaryKey)) {
-
-				MBSuspiciousActivity mbSuspiciousActivity =
-					(MBSuspiciousActivity)entityCache.getResult(
-						MBSuspiciousActivityImpl.class, primaryKey);
-
-				if (mbSuspiciousActivity == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, mbSuspiciousActivity);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (MBSuspiciousActivity mbSuspiciousActivity :
-					(List<MBSuspiciousActivity>)query.list()) {
-
-				map.put(
-					mbSuspiciousActivity.getPrimaryKeyObj(),
-					mbSuspiciousActivity);
-
-				cacheResult(mbSuspiciousActivity);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2173,9 +1885,6 @@ public class MBSuspiciousActivityPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"mbSuspiciousActivity.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No MBSuspiciousActivity exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No MBSuspiciousActivity exists with the key {";
 
@@ -2191,4 +1900,4 @@ public class MBSuspiciousActivityPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1811241382
+// LIFERAY-SERVICE-BUILDER-HASH:1311133803

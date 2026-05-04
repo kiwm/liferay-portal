@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = MBBanPersistence.class)
 public class MBBanPersistenceImpl
-	extends BasePersistenceImpl<MBBan> implements MBBanPersistence {
+	extends BasePersistenceImpl<MBBan, NoSuchBanException>
+	implements MBBanPersistence {
 
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -1126,48 +1126,6 @@ public class MBBanPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all message boards bans.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(MBBanImpl.class);
-
-		finderCache.clearCache(MBBanImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the message boards ban.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(MBBan mbBan) {
-		entityCache.removeResult(MBBanImpl.class, mbBan);
-	}
-
-	@Override
-	public void clearCache(List<MBBan> mbBans) {
-		for (MBBan mbBan : mbBans) {
-			entityCache.removeResult(MBBanImpl.class, mbBan);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(MBBanImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(MBBanImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(MBBanModelImpl mbBanModelImpl) {
 		try (SafeCloseable safeCloseable =
 				CTCollectionThreadLocal.setCTCollectionIdWithSafeCloseable(
@@ -1220,44 +1178,6 @@ public class MBBanPersistenceImpl
 	@Override
 	public MBBan remove(long banId) throws NoSuchBanException {
 		return remove((Serializable)banId);
-	}
-
-	/**
-	 * Removes the message boards ban with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the message boards ban
-	 * @return the message boards ban that was removed
-	 * @throws NoSuchBanException if a message boards ban with the primary key could not be found
-	 */
-	@Override
-	public MBBan remove(Serializable primaryKey) throws NoSuchBanException {
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			MBBan mbBan = (MBBan)session.get(MBBanImpl.class, primaryKey);
-
-			if (mbBan == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchBanException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(mbBan);
-		}
-		catch (NoSuchBanException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1378,31 +1298,6 @@ public class MBBanPersistenceImpl
 	}
 
 	/**
-	 * Returns the message boards ban with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the message boards ban
-	 * @return the message boards ban
-	 * @throws NoSuchBanException if a message boards ban with the primary key could not be found
-	 */
-	@Override
-	public MBBan findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchBanException {
-
-		MBBan mbBan = fetchByPrimaryKey(primaryKey);
-
-		if (mbBan == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchBanException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return mbBan;
-	}
-
-	/**
 	 * Returns the message boards ban with the primary key or throws a <code>NoSuchBanException</code> if it could not be found.
 	 *
 	 * @param banId the primary key of the message boards ban
@@ -1414,48 +1309,9 @@ public class MBBanPersistenceImpl
 		return findByPrimaryKey((Serializable)banId);
 	}
 
-	/**
-	 * Returns the message boards ban with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the message boards ban
-	 * @return the message boards ban, or <code>null</code> if a message boards ban with the primary key could not be found
-	 */
 	@Override
-	public MBBan fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(MBBan.class, primaryKey)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		MBBan mbBan = (MBBan)entityCache.getResult(MBBanImpl.class, primaryKey);
-
-		if (mbBan != null) {
-			return mbBan;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			mbBan = (MBBan)session.get(MBBanImpl.class, primaryKey);
-
-			if (mbBan != null) {
-				cacheResult(mbBan);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return mbBan;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1467,128 +1323,6 @@ public class MBBanPersistenceImpl
 	@Override
 	public MBBan fetchByPrimaryKey(long banId) {
 		return fetchByPrimaryKey((Serializable)banId);
-	}
-
-	@Override
-	public Map<Serializable, MBBan> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(MBBan.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, MBBan> map = new HashMap<Serializable, MBBan>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			MBBan mbBan = fetchByPrimaryKey(primaryKey);
-
-			if (mbBan != null) {
-				map.put(primaryKey, mbBan);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						MBBan.class, primaryKey)) {
-
-				MBBan mbBan = (MBBan)entityCache.getResult(
-					MBBanImpl.class, primaryKey);
-
-				if (mbBan == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, mbBan);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (MBBan mbBan : (List<MBBan>)query.list()) {
-				map.put(mbBan.getPrimaryKeyObj(), mbBan);
-
-				cacheResult(mbBan);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2122,9 +1856,6 @@ public class MBBanPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "mbBan.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No MBBan exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No MBBan exists with the key {";
 
@@ -2140,4 +1871,4 @@ public class MBBanPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-816569278
+// LIFERAY-SERVICE-BUILDER-HASH:1936119643

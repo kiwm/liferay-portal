@@ -51,7 +51,6 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,7 +74,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = DepotEntryPinPersistence.class)
 public class DepotEntryPinPersistenceImpl
-	extends BasePersistenceImpl<DepotEntryPin>
+	extends BasePersistenceImpl<DepotEntryPin, NoSuchEntryPinException>
 	implements DepotEntryPinPersistence {
 
 	/*
@@ -995,48 +994,6 @@ public class DepotEntryPinPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all depot entry pins.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(DepotEntryPinImpl.class);
-
-		finderCache.clearCache(DepotEntryPinImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the depot entry pin.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DepotEntryPin depotEntryPin) {
-		entityCache.removeResult(DepotEntryPinImpl.class, depotEntryPin);
-	}
-
-	@Override
-	public void clearCache(List<DepotEntryPin> depotEntryPins) {
-		for (DepotEntryPin depotEntryPin : depotEntryPins) {
-			entityCache.removeResult(DepotEntryPinImpl.class, depotEntryPin);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(DepotEntryPinImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(DepotEntryPinImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DepotEntryPinModelImpl depotEntryPinModelImpl) {
 
@@ -1096,47 +1053,6 @@ public class DepotEntryPinPersistenceImpl
 		throws NoSuchEntryPinException {
 
 		return remove((Serializable)depotEntryPinId);
-	}
-
-	/**
-	 * Removes the depot entry pin with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the depot entry pin
-	 * @return the depot entry pin that was removed
-	 * @throws NoSuchEntryPinException if a depot entry pin with the primary key could not be found
-	 */
-	@Override
-	public DepotEntryPin remove(Serializable primaryKey)
-		throws NoSuchEntryPinException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DepotEntryPin depotEntryPin = (DepotEntryPin)session.get(
-				DepotEntryPinImpl.class, primaryKey);
-
-			if (depotEntryPin == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEntryPinException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(depotEntryPin);
-		}
-		catch (NoSuchEntryPinException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1241,31 +1157,6 @@ public class DepotEntryPinPersistenceImpl
 	}
 
 	/**
-	 * Returns the depot entry pin with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the depot entry pin
-	 * @return the depot entry pin
-	 * @throws NoSuchEntryPinException if a depot entry pin with the primary key could not be found
-	 */
-	@Override
-	public DepotEntryPin findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEntryPinException {
-
-		DepotEntryPin depotEntryPin = fetchByPrimaryKey(primaryKey);
-
-		if (depotEntryPin == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEntryPinException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return depotEntryPin;
-	}
-
-	/**
 	 * Returns the depot entry pin with the primary key or throws a <code>NoSuchEntryPinException</code> if it could not be found.
 	 *
 	 * @param depotEntryPinId the primary key of the depot entry pin
@@ -1279,52 +1170,9 @@ public class DepotEntryPinPersistenceImpl
 		return findByPrimaryKey((Serializable)depotEntryPinId);
 	}
 
-	/**
-	 * Returns the depot entry pin with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the depot entry pin
-	 * @return the depot entry pin, or <code>null</code> if a depot entry pin with the primary key could not be found
-	 */
 	@Override
-	public DepotEntryPin fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				DepotEntryPin.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DepotEntryPin depotEntryPin = (DepotEntryPin)entityCache.getResult(
-			DepotEntryPinImpl.class, primaryKey);
-
-		if (depotEntryPin != null) {
-			return depotEntryPin;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			depotEntryPin = (DepotEntryPin)session.get(
-				DepotEntryPinImpl.class, primaryKey);
-
-			if (depotEntryPin != null) {
-				cacheResult(depotEntryPin);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return depotEntryPin;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1336,132 +1184,6 @@ public class DepotEntryPinPersistenceImpl
 	@Override
 	public DepotEntryPin fetchByPrimaryKey(long depotEntryPinId) {
 		return fetchByPrimaryKey((Serializable)depotEntryPinId);
-	}
-
-	@Override
-	public Map<Serializable, DepotEntryPin> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(DepotEntryPin.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DepotEntryPin> map =
-			new HashMap<Serializable, DepotEntryPin>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DepotEntryPin depotEntryPin = fetchByPrimaryKey(primaryKey);
-
-			if (depotEntryPin != null) {
-				map.put(primaryKey, depotEntryPin);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						DepotEntryPin.class, primaryKey)) {
-
-				DepotEntryPin depotEntryPin =
-					(DepotEntryPin)entityCache.getResult(
-						DepotEntryPinImpl.class, primaryKey);
-
-				if (depotEntryPin == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, depotEntryPin);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DepotEntryPin depotEntryPin :
-					(List<DepotEntryPin>)query.list()) {
-
-				map.put(depotEntryPin.getPrimaryKeyObj(), depotEntryPin);
-
-				cacheResult(depotEntryPin);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1961,9 +1683,6 @@ public class DepotEntryPinPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "depotEntryPin.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DepotEntryPin exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DepotEntryPin exists with the key {";
 
@@ -1979,4 +1698,4 @@ public class DepotEntryPinPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1658334478
+// LIFERAY-SERVICE-BUILDER-HASH:1023770440

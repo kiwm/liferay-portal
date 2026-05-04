@@ -54,7 +54,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = MBDiscussionPersistence.class)
 public class MBDiscussionPersistenceImpl
-	extends BasePersistenceImpl<MBDiscussion>
+	extends BasePersistenceImpl<MBDiscussion, NoSuchDiscussionException>
 	implements MBDiscussionPersistence {
 
 	/*
@@ -777,48 +776,6 @@ public class MBDiscussionPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all message boards discussions.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(MBDiscussionImpl.class);
-
-		finderCache.clearCache(MBDiscussionImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the message boards discussion.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(MBDiscussion mbDiscussion) {
-		entityCache.removeResult(MBDiscussionImpl.class, mbDiscussion);
-	}
-
-	@Override
-	public void clearCache(List<MBDiscussion> mbDiscussions) {
-		for (MBDiscussion mbDiscussion : mbDiscussions) {
-			entityCache.removeResult(MBDiscussionImpl.class, mbDiscussion);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(MBDiscussionImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(MBDiscussionImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		MBDiscussionModelImpl mbDiscussionModelImpl) {
 
@@ -883,47 +840,6 @@ public class MBDiscussionPersistenceImpl
 		throws NoSuchDiscussionException {
 
 		return remove((Serializable)discussionId);
-	}
-
-	/**
-	 * Removes the message boards discussion with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the message boards discussion
-	 * @return the message boards discussion that was removed
-	 * @throws NoSuchDiscussionException if a message boards discussion with the primary key could not be found
-	 */
-	@Override
-	public MBDiscussion remove(Serializable primaryKey)
-		throws NoSuchDiscussionException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			MBDiscussion mbDiscussion = (MBDiscussion)session.get(
-				MBDiscussionImpl.class, primaryKey);
-
-			if (mbDiscussion == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchDiscussionException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(mbDiscussion);
-		}
-		catch (NoSuchDiscussionException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1052,31 +968,6 @@ public class MBDiscussionPersistenceImpl
 	}
 
 	/**
-	 * Returns the message boards discussion with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the message boards discussion
-	 * @return the message boards discussion
-	 * @throws NoSuchDiscussionException if a message boards discussion with the primary key could not be found
-	 */
-	@Override
-	public MBDiscussion findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchDiscussionException {
-
-		MBDiscussion mbDiscussion = fetchByPrimaryKey(primaryKey);
-
-		if (mbDiscussion == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchDiscussionException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return mbDiscussion;
-	}
-
-	/**
 	 * Returns the message boards discussion with the primary key or throws a <code>NoSuchDiscussionException</code> if it could not be found.
 	 *
 	 * @param discussionId the primary key of the message boards discussion
@@ -1090,52 +981,9 @@ public class MBDiscussionPersistenceImpl
 		return findByPrimaryKey((Serializable)discussionId);
 	}
 
-	/**
-	 * Returns the message boards discussion with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the message boards discussion
-	 * @return the message boards discussion, or <code>null</code> if a message boards discussion with the primary key could not be found
-	 */
 	@Override
-	public MBDiscussion fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				MBDiscussion.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		MBDiscussion mbDiscussion = (MBDiscussion)entityCache.getResult(
-			MBDiscussionImpl.class, primaryKey);
-
-		if (mbDiscussion != null) {
-			return mbDiscussion;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			mbDiscussion = (MBDiscussion)session.get(
-				MBDiscussionImpl.class, primaryKey);
-
-			if (mbDiscussion != null) {
-				cacheResult(mbDiscussion);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return mbDiscussion;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1147,129 +995,6 @@ public class MBDiscussionPersistenceImpl
 	@Override
 	public MBDiscussion fetchByPrimaryKey(long discussionId) {
 		return fetchByPrimaryKey((Serializable)discussionId);
-	}
-
-	@Override
-	public Map<Serializable, MBDiscussion> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(MBDiscussion.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, MBDiscussion> map =
-			new HashMap<Serializable, MBDiscussion>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			MBDiscussion mbDiscussion = fetchByPrimaryKey(primaryKey);
-
-			if (mbDiscussion != null) {
-				map.put(primaryKey, mbDiscussion);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						MBDiscussion.class, primaryKey)) {
-
-				MBDiscussion mbDiscussion = (MBDiscussion)entityCache.getResult(
-					MBDiscussionImpl.class, primaryKey);
-
-				if (mbDiscussion == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, mbDiscussion);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (MBDiscussion mbDiscussion : (List<MBDiscussion>)query.list()) {
-				map.put(mbDiscussion.getPrimaryKeyObj(), mbDiscussion);
-
-				cacheResult(mbDiscussion);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1732,9 +1457,6 @@ public class MBDiscussionPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_ALIAS = "mbDiscussion.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No MBDiscussion exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No MBDiscussion exists with the key {";
 
@@ -1750,4 +1472,4 @@ public class MBDiscussionPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:721766619
+// LIFERAY-SERVICE-BUILDER-HASH:-1575011481

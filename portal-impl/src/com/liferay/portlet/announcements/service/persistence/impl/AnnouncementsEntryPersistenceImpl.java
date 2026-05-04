@@ -35,6 +35,7 @@ import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
 import com.liferay.portal.kernel.security.permission.InlineSQLHelperUtil;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
+import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelper;
 import com.liferay.portal.kernel.service.persistence.change.tracking.helper.CTPersistenceHelperUtil;
 import com.liferay.portal.kernel.service.persistence.impl.BasePersistenceImpl;
 import com.liferay.portal.kernel.service.persistence.impl.CollectionPersistenceFinder;
@@ -61,7 +62,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -78,7 +78,7 @@ import java.util.Set;
  * @generated
  */
 public class AnnouncementsEntryPersistenceImpl
-	extends BasePersistenceImpl<AnnouncementsEntry>
+	extends BasePersistenceImpl<AnnouncementsEntry, NoSuchEntryException>
 	implements AnnouncementsEntryPersistence {
 
 	/*
@@ -3390,51 +3390,6 @@ public class AnnouncementsEntryPersistenceImpl
 	}
 
 	/**
-	 * Clears the cache for all announcements entries.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		EntityCacheUtil.clearCache(AnnouncementsEntryImpl.class);
-
-		FinderCacheUtil.clearCache(AnnouncementsEntryImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the announcements entry.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(AnnouncementsEntry announcementsEntry) {
-		EntityCacheUtil.removeResult(
-			AnnouncementsEntryImpl.class, announcementsEntry);
-	}
-
-	@Override
-	public void clearCache(List<AnnouncementsEntry> announcementsEntries) {
-		for (AnnouncementsEntry announcementsEntry : announcementsEntries) {
-			EntityCacheUtil.removeResult(
-				AnnouncementsEntryImpl.class, announcementsEntry);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		FinderCacheUtil.clearCache(AnnouncementsEntryImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			EntityCacheUtil.removeResult(
-				AnnouncementsEntryImpl.class, primaryKey);
-		}
-	}
-
-	/**
 	 * Creates a new announcements entry with the primary key. Does not add the announcements entry to the database.
 	 *
 	 * @param entryId the primary key for the new announcements entry
@@ -3466,48 +3421,6 @@ public class AnnouncementsEntryPersistenceImpl
 	@Override
 	public AnnouncementsEntry remove(long entryId) throws NoSuchEntryException {
 		return remove((Serializable)entryId);
-	}
-
-	/**
-	 * Removes the announcements entry with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the announcements entry
-	 * @return the announcements entry that was removed
-	 * @throws NoSuchEntryException if a announcements entry with the primary key could not be found
-	 */
-	@Override
-	public AnnouncementsEntry remove(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			AnnouncementsEntry announcementsEntry =
-				(AnnouncementsEntry)session.get(
-					AnnouncementsEntryImpl.class, primaryKey);
-
-			if (announcementsEntry == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchEntryException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(announcementsEntry);
-		}
-		catch (NoSuchEntryException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -3668,31 +3581,6 @@ public class AnnouncementsEntryPersistenceImpl
 	}
 
 	/**
-	 * Returns the announcements entry with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the announcements entry
-	 * @return the announcements entry
-	 * @throws NoSuchEntryException if a announcements entry with the primary key could not be found
-	 */
-	@Override
-	public AnnouncementsEntry findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchEntryException {
-
-		AnnouncementsEntry announcementsEntry = fetchByPrimaryKey(primaryKey);
-
-		if (announcementsEntry == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchEntryException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return announcementsEntry;
-	}
-
-	/**
 	 * Returns the announcements entry with the primary key or throws a <code>NoSuchEntryException</code> if it could not be found.
 	 *
 	 * @param entryId the primary key of the announcements entry
@@ -3706,53 +3594,9 @@ public class AnnouncementsEntryPersistenceImpl
 		return findByPrimaryKey((Serializable)entryId);
 	}
 
-	/**
-	 * Returns the announcements entry with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the announcements entry
-	 * @return the announcements entry, or <code>null</code> if a announcements entry with the primary key could not be found
-	 */
 	@Override
-	public AnnouncementsEntry fetchByPrimaryKey(Serializable primaryKey) {
-		if (CTPersistenceHelperUtil.isProductionMode(
-				AnnouncementsEntry.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		AnnouncementsEntry announcementsEntry =
-			(AnnouncementsEntry)EntityCacheUtil.getResult(
-				AnnouncementsEntryImpl.class, primaryKey);
-
-		if (announcementsEntry != null) {
-			return announcementsEntry;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			announcementsEntry = (AnnouncementsEntry)session.get(
-				AnnouncementsEntryImpl.class, primaryKey);
-
-			if (announcementsEntry != null) {
-				cacheResult(announcementsEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return announcementsEntry;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return CTPersistenceHelperUtil.getCTPersistenceHelper();
 	}
 
 	/**
@@ -3764,136 +3608,6 @@ public class AnnouncementsEntryPersistenceImpl
 	@Override
 	public AnnouncementsEntry fetchByPrimaryKey(long entryId) {
 		return fetchByPrimaryKey((Serializable)entryId);
-	}
-
-	@Override
-	public Map<Serializable, AnnouncementsEntry> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (CTPersistenceHelperUtil.isProductionMode(
-				AnnouncementsEntry.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, AnnouncementsEntry> map =
-			new HashMap<Serializable, AnnouncementsEntry>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			AnnouncementsEntry announcementsEntry = fetchByPrimaryKey(
-				primaryKey);
-
-			if (announcementsEntry != null) {
-				map.put(primaryKey, announcementsEntry);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					CTPersistenceHelperUtil.setCTCollectionIdWithSafeCloseable(
-						AnnouncementsEntry.class, primaryKey)) {
-
-				AnnouncementsEntry announcementsEntry =
-					(AnnouncementsEntry)EntityCacheUtil.getResult(
-						AnnouncementsEntryImpl.class, primaryKey);
-
-				if (announcementsEntry == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, announcementsEntry);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (AnnouncementsEntry announcementsEntry :
-					(List<AnnouncementsEntry>)query.list()) {
-
-				map.put(
-					announcementsEntry.getPrimaryKeyObj(), announcementsEntry);
-
-				cacheResult(announcementsEntry);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -4530,9 +4244,6 @@ public class AnnouncementsEntryPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "AnnouncementsEntry.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No AnnouncementsEntry exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No AnnouncementsEntry exists with the key {";
 
@@ -4548,4 +4259,4 @@ public class AnnouncementsEntryPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:2058330939
+// LIFERAY-SERVICE-BUILDER-HASH:-184977144

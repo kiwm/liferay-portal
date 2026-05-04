@@ -61,7 +61,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -86,7 +85,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = ClientExtensionEntryRelPersistence.class)
 public class ClientExtensionEntryRelPersistenceImpl
-	extends BasePersistenceImpl<ClientExtensionEntryRel>
+	extends BasePersistenceImpl
+		<ClientExtensionEntryRel, NoSuchClientExtensionEntryRelException>
 	implements ClientExtensionEntryRelPersistence {
 
 	/*
@@ -1404,55 +1404,6 @@ public class ClientExtensionEntryRelPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all client extension entry rels.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(ClientExtensionEntryRelImpl.class);
-
-		finderCache.clearCache(ClientExtensionEntryRelImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the client extension entry rel.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(ClientExtensionEntryRel clientExtensionEntryRel) {
-		entityCache.removeResult(
-			ClientExtensionEntryRelImpl.class, clientExtensionEntryRel);
-	}
-
-	@Override
-	public void clearCache(
-		List<ClientExtensionEntryRel> clientExtensionEntryRels) {
-
-		for (ClientExtensionEntryRel clientExtensionEntryRel :
-				clientExtensionEntryRels) {
-
-			entityCache.removeResult(
-				ClientExtensionEntryRelImpl.class, clientExtensionEntryRel);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(ClientExtensionEntryRelImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				ClientExtensionEntryRelImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		ClientExtensionEntryRelModelImpl clientExtensionEntryRelModelImpl) {
 
@@ -1515,48 +1466,6 @@ public class ClientExtensionEntryRelPersistenceImpl
 		throws NoSuchClientExtensionEntryRelException {
 
 		return remove((Serializable)clientExtensionEntryRelId);
-	}
-
-	/**
-	 * Removes the client extension entry rel with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the client extension entry rel
-	 * @return the client extension entry rel that was removed
-	 * @throws NoSuchClientExtensionEntryRelException if a client extension entry rel with the primary key could not be found
-	 */
-	@Override
-	public ClientExtensionEntryRel remove(Serializable primaryKey)
-		throws NoSuchClientExtensionEntryRelException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			ClientExtensionEntryRel clientExtensionEntryRel =
-				(ClientExtensionEntryRel)session.get(
-					ClientExtensionEntryRelImpl.class, primaryKey);
-
-			if (clientExtensionEntryRel == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchClientExtensionEntryRelException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(clientExtensionEntryRel);
-		}
-		catch (NoSuchClientExtensionEntryRelException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1767,32 +1676,6 @@ public class ClientExtensionEntryRelPersistenceImpl
 	}
 
 	/**
-	 * Returns the client extension entry rel with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the client extension entry rel
-	 * @return the client extension entry rel
-	 * @throws NoSuchClientExtensionEntryRelException if a client extension entry rel with the primary key could not be found
-	 */
-	@Override
-	public ClientExtensionEntryRel findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchClientExtensionEntryRelException {
-
-		ClientExtensionEntryRel clientExtensionEntryRel = fetchByPrimaryKey(
-			primaryKey);
-
-		if (clientExtensionEntryRel == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchClientExtensionEntryRelException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return clientExtensionEntryRel;
-	}
-
-	/**
 	 * Returns the client extension entry rel with the primary key or throws a <code>NoSuchClientExtensionEntryRelException</code> if it could not be found.
 	 *
 	 * @param clientExtensionEntryRelId the primary key of the client extension entry rel
@@ -1807,53 +1690,9 @@ public class ClientExtensionEntryRelPersistenceImpl
 		return findByPrimaryKey((Serializable)clientExtensionEntryRelId);
 	}
 
-	/**
-	 * Returns the client extension entry rel with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the client extension entry rel
-	 * @return the client extension entry rel, or <code>null</code> if a client extension entry rel with the primary key could not be found
-	 */
 	@Override
-	public ClientExtensionEntryRel fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				ClientExtensionEntryRel.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		ClientExtensionEntryRel clientExtensionEntryRel =
-			(ClientExtensionEntryRel)entityCache.getResult(
-				ClientExtensionEntryRelImpl.class, primaryKey);
-
-		if (clientExtensionEntryRel != null) {
-			return clientExtensionEntryRel;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			clientExtensionEntryRel = (ClientExtensionEntryRel)session.get(
-				ClientExtensionEntryRelImpl.class, primaryKey);
-
-			if (clientExtensionEntryRel != null) {
-				cacheResult(clientExtensionEntryRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return clientExtensionEntryRel;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1867,137 +1706,6 @@ public class ClientExtensionEntryRelPersistenceImpl
 		long clientExtensionEntryRelId) {
 
 		return fetchByPrimaryKey((Serializable)clientExtensionEntryRelId);
-	}
-
-	@Override
-	public Map<Serializable, ClientExtensionEntryRel> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(
-				ClientExtensionEntryRel.class)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, ClientExtensionEntryRel> map =
-			new HashMap<Serializable, ClientExtensionEntryRel>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			ClientExtensionEntryRel clientExtensionEntryRel = fetchByPrimaryKey(
-				primaryKey);
-
-			if (clientExtensionEntryRel != null) {
-				map.put(primaryKey, clientExtensionEntryRel);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						ClientExtensionEntryRel.class, primaryKey)) {
-
-				ClientExtensionEntryRel clientExtensionEntryRel =
-					(ClientExtensionEntryRel)entityCache.getResult(
-						ClientExtensionEntryRelImpl.class, primaryKey);
-
-				if (clientExtensionEntryRel == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, clientExtensionEntryRel);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (ClientExtensionEntryRel clientExtensionEntryRel :
-					(List<ClientExtensionEntryRel>)query.list()) {
-
-				map.put(
-					clientExtensionEntryRel.getPrimaryKeyObj(),
-					clientExtensionEntryRel);
-
-				cacheResult(clientExtensionEntryRel);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2609,9 +2317,6 @@ public class ClientExtensionEntryRelPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"clientExtensionEntryRel.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No ClientExtensionEntryRel exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No ClientExtensionEntryRel exists with the key {";
 
@@ -2627,4 +2332,4 @@ public class ClientExtensionEntryRelPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1518773606
+// LIFERAY-SERVICE-BUILDER-HASH:682963440

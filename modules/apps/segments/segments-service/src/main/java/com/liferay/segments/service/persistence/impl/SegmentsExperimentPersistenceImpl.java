@@ -57,7 +57,6 @@ import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -81,7 +80,7 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = SegmentsExperimentPersistence.class)
 public class SegmentsExperimentPersistenceImpl
-	extends BasePersistenceImpl<SegmentsExperiment>
+	extends BasePersistenceImpl<SegmentsExperiment, NoSuchExperimentException>
 	implements SegmentsExperimentPersistence {
 
 	/*
@@ -1349,50 +1348,6 @@ public class SegmentsExperimentPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all segments experiments.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(SegmentsExperimentImpl.class);
-
-		finderCache.clearCache(SegmentsExperimentImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the segments experiment.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(SegmentsExperiment segmentsExperiment) {
-		entityCache.removeResult(
-			SegmentsExperimentImpl.class, segmentsExperiment);
-	}
-
-	@Override
-	public void clearCache(List<SegmentsExperiment> segmentsExperiments) {
-		for (SegmentsExperiment segmentsExperiment : segmentsExperiments) {
-			entityCache.removeResult(
-				SegmentsExperimentImpl.class, segmentsExperiment);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(SegmentsExperimentImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(SegmentsExperimentImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		SegmentsExperimentModelImpl segmentsExperimentModelImpl) {
 
@@ -1461,48 +1416,6 @@ public class SegmentsExperimentPersistenceImpl
 		throws NoSuchExperimentException {
 
 		return remove((Serializable)segmentsExperimentId);
-	}
-
-	/**
-	 * Removes the segments experiment with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the segments experiment
-	 * @return the segments experiment that was removed
-	 * @throws NoSuchExperimentException if a segments experiment with the primary key could not be found
-	 */
-	@Override
-	public SegmentsExperiment remove(Serializable primaryKey)
-		throws NoSuchExperimentException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			SegmentsExperiment segmentsExperiment =
-				(SegmentsExperiment)session.get(
-					SegmentsExperimentImpl.class, primaryKey);
-
-			if (segmentsExperiment == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchExperimentException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(segmentsExperiment);
-		}
-		catch (NoSuchExperimentException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -1639,31 +1552,6 @@ public class SegmentsExperimentPersistenceImpl
 	}
 
 	/**
-	 * Returns the segments experiment with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the segments experiment
-	 * @return the segments experiment
-	 * @throws NoSuchExperimentException if a segments experiment with the primary key could not be found
-	 */
-	@Override
-	public SegmentsExperiment findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchExperimentException {
-
-		SegmentsExperiment segmentsExperiment = fetchByPrimaryKey(primaryKey);
-
-		if (segmentsExperiment == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchExperimentException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return segmentsExperiment;
-	}
-
-	/**
 	 * Returns the segments experiment with the primary key or throws a <code>NoSuchExperimentException</code> if it could not be found.
 	 *
 	 * @param segmentsExperimentId the primary key of the segments experiment
@@ -1677,53 +1565,9 @@ public class SegmentsExperimentPersistenceImpl
 		return findByPrimaryKey((Serializable)segmentsExperimentId);
 	}
 
-	/**
-	 * Returns the segments experiment with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the segments experiment
-	 * @return the segments experiment, or <code>null</code> if a segments experiment with the primary key could not be found
-	 */
 	@Override
-	public SegmentsExperiment fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				SegmentsExperiment.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		SegmentsExperiment segmentsExperiment =
-			(SegmentsExperiment)entityCache.getResult(
-				SegmentsExperimentImpl.class, primaryKey);
-
-		if (segmentsExperiment != null) {
-			return segmentsExperiment;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			segmentsExperiment = (SegmentsExperiment)session.get(
-				SegmentsExperimentImpl.class, primaryKey);
-
-			if (segmentsExperiment != null) {
-				cacheResult(segmentsExperiment);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return segmentsExperiment;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1735,134 +1579,6 @@ public class SegmentsExperimentPersistenceImpl
 	@Override
 	public SegmentsExperiment fetchByPrimaryKey(long segmentsExperimentId) {
 		return fetchByPrimaryKey((Serializable)segmentsExperimentId);
-	}
-
-	@Override
-	public Map<Serializable, SegmentsExperiment> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(SegmentsExperiment.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, SegmentsExperiment> map =
-			new HashMap<Serializable, SegmentsExperiment>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			SegmentsExperiment segmentsExperiment = fetchByPrimaryKey(
-				primaryKey);
-
-			if (segmentsExperiment != null) {
-				map.put(primaryKey, segmentsExperiment);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						SegmentsExperiment.class, primaryKey)) {
-
-				SegmentsExperiment segmentsExperiment =
-					(SegmentsExperiment)entityCache.getResult(
-						SegmentsExperimentImpl.class, primaryKey);
-
-				if (segmentsExperiment == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, segmentsExperiment);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (SegmentsExperiment segmentsExperiment :
-					(List<SegmentsExperiment>)query.list()) {
-
-				map.put(
-					segmentsExperiment.getPrimaryKeyObj(), segmentsExperiment);
-
-				cacheResult(segmentsExperiment);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -2437,9 +2153,6 @@ public class SegmentsExperimentPersistenceImpl
 
 	private static final String _ORDER_BY_ENTITY_TABLE = "SegmentsExperiment.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No SegmentsExperiment exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No SegmentsExperiment exists with the key {";
 
@@ -2455,4 +2168,4 @@ public class SegmentsExperimentPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:-1550183576
+// LIFERAY-SERVICE-BUILDER-HASH:1370570758

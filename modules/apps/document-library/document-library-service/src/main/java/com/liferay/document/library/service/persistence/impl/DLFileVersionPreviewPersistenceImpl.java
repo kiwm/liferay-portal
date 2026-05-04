@@ -46,9 +46,7 @@ import java.lang.reflect.InvocationHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,7 +70,8 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(service = DLFileVersionPreviewPersistence.class)
 public class DLFileVersionPreviewPersistenceImpl
-	extends BasePersistenceImpl<DLFileVersionPreview>
+	extends BasePersistenceImpl
+		<DLFileVersionPreview, NoSuchFileVersionPreviewException>
 	implements DLFileVersionPreviewPersistence {
 
 	/*
@@ -702,53 +701,6 @@ public class DLFileVersionPreviewPersistenceImpl
 		}
 	}
 
-	/**
-	 * Clears the cache for all dl file version previews.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache() {
-		entityCache.clearCache(DLFileVersionPreviewImpl.class);
-
-		finderCache.clearCache(DLFileVersionPreviewImpl.class);
-	}
-
-	/**
-	 * Clears the cache for the dl file version preview.
-	 *
-	 * <p>
-	 * The <code>EntityCache</code> and <code>FinderCache</code> are both cleared by this method.
-	 * </p>
-	 */
-	@Override
-	public void clearCache(DLFileVersionPreview dlFileVersionPreview) {
-		entityCache.removeResult(
-			DLFileVersionPreviewImpl.class, dlFileVersionPreview);
-	}
-
-	@Override
-	public void clearCache(List<DLFileVersionPreview> dlFileVersionPreviews) {
-		for (DLFileVersionPreview dlFileVersionPreview :
-				dlFileVersionPreviews) {
-
-			entityCache.removeResult(
-				DLFileVersionPreviewImpl.class, dlFileVersionPreview);
-		}
-	}
-
-	@Override
-	public void clearCache(Set<Serializable> primaryKeys) {
-		finderCache.clearCache(DLFileVersionPreviewImpl.class);
-
-		for (Serializable primaryKey : primaryKeys) {
-			entityCache.removeResult(
-				DLFileVersionPreviewImpl.class, primaryKey);
-		}
-	}
-
 	protected void cacheUniqueFindersCache(
 		DLFileVersionPreviewModelImpl dlFileVersionPreviewModelImpl) {
 
@@ -806,48 +758,6 @@ public class DLFileVersionPreviewPersistenceImpl
 		throws NoSuchFileVersionPreviewException {
 
 		return remove((Serializable)dlFileVersionPreviewId);
-	}
-
-	/**
-	 * Removes the dl file version preview with the primary key from the database. Also notifies the appropriate model listeners.
-	 *
-	 * @param primaryKey the primary key of the dl file version preview
-	 * @return the dl file version preview that was removed
-	 * @throws NoSuchFileVersionPreviewException if a dl file version preview with the primary key could not be found
-	 */
-	@Override
-	public DLFileVersionPreview remove(Serializable primaryKey)
-		throws NoSuchFileVersionPreviewException {
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			DLFileVersionPreview dlFileVersionPreview =
-				(DLFileVersionPreview)session.get(
-					DLFileVersionPreviewImpl.class, primaryKey);
-
-			if (dlFileVersionPreview == null) {
-				if (_log.isDebugEnabled()) {
-					_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-				}
-
-				throw new NoSuchFileVersionPreviewException(
-					_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			return remove(dlFileVersionPreview);
-		}
-		catch (NoSuchFileVersionPreviewException noSuchEntityException) {
-			throw noSuchEntityException;
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
 	}
 
 	@Override
@@ -953,32 +863,6 @@ public class DLFileVersionPreviewPersistenceImpl
 	}
 
 	/**
-	 * Returns the dl file version preview with the primary key or throws a <code>com.liferay.portal.kernel.exception.NoSuchModelException</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the dl file version preview
-	 * @return the dl file version preview
-	 * @throws NoSuchFileVersionPreviewException if a dl file version preview with the primary key could not be found
-	 */
-	@Override
-	public DLFileVersionPreview findByPrimaryKey(Serializable primaryKey)
-		throws NoSuchFileVersionPreviewException {
-
-		DLFileVersionPreview dlFileVersionPreview = fetchByPrimaryKey(
-			primaryKey);
-
-		if (dlFileVersionPreview == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-			}
-
-			throw new NoSuchFileVersionPreviewException(
-				_NO_SUCH_ENTITY_WITH_PRIMARY_KEY + primaryKey);
-		}
-
-		return dlFileVersionPreview;
-	}
-
-	/**
 	 * Returns the dl file version preview with the primary key or throws a <code>NoSuchFileVersionPreviewException</code> if it could not be found.
 	 *
 	 * @param dlFileVersionPreviewId the primary key of the dl file version preview
@@ -992,53 +876,9 @@ public class DLFileVersionPreviewPersistenceImpl
 		return findByPrimaryKey((Serializable)dlFileVersionPreviewId);
 	}
 
-	/**
-	 * Returns the dl file version preview with the primary key or returns <code>null</code> if it could not be found.
-	 *
-	 * @param primaryKey the primary key of the dl file version preview
-	 * @return the dl file version preview, or <code>null</code> if a dl file version preview with the primary key could not be found
-	 */
 	@Override
-	public DLFileVersionPreview fetchByPrimaryKey(Serializable primaryKey) {
-		if (ctPersistenceHelper.isProductionMode(
-				DLFileVersionPreview.class, primaryKey)) {
-
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKey(primaryKey);
-			}
-		}
-
-		DLFileVersionPreview dlFileVersionPreview =
-			(DLFileVersionPreview)entityCache.getResult(
-				DLFileVersionPreviewImpl.class, primaryKey);
-
-		if (dlFileVersionPreview != null) {
-			return dlFileVersionPreview;
-		}
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			dlFileVersionPreview = (DLFileVersionPreview)session.get(
-				DLFileVersionPreviewImpl.class, primaryKey);
-
-			if (dlFileVersionPreview != null) {
-				cacheResult(dlFileVersionPreview);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return dlFileVersionPreview;
+	protected CTPersistenceHelper getCTPersistenceHelper() {
+		return ctPersistenceHelper;
 	}
 
 	/**
@@ -1050,135 +890,6 @@ public class DLFileVersionPreviewPersistenceImpl
 	@Override
 	public DLFileVersionPreview fetchByPrimaryKey(long dlFileVersionPreviewId) {
 		return fetchByPrimaryKey((Serializable)dlFileVersionPreviewId);
-	}
-
-	@Override
-	public Map<Serializable, DLFileVersionPreview> fetchByPrimaryKeys(
-		Set<Serializable> primaryKeys) {
-
-		if (ctPersistenceHelper.isProductionMode(DLFileVersionPreview.class)) {
-			try (SafeCloseable safeCloseable =
-					CTCollectionThreadLocal.
-						setProductionModeWithSafeCloseable()) {
-
-				return super.fetchByPrimaryKeys(primaryKeys);
-			}
-		}
-
-		if (primaryKeys.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<Serializable, DLFileVersionPreview> map =
-			new HashMap<Serializable, DLFileVersionPreview>();
-
-		if (primaryKeys.size() == 1) {
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			Serializable primaryKey = iterator.next();
-
-			DLFileVersionPreview dlFileVersionPreview = fetchByPrimaryKey(
-				primaryKey);
-
-			if (dlFileVersionPreview != null) {
-				map.put(primaryKey, dlFileVersionPreview);
-			}
-
-			return map;
-		}
-
-		Set<Serializable> uncachedPrimaryKeys = null;
-
-		for (Serializable primaryKey : primaryKeys) {
-			try (SafeCloseable safeCloseable =
-					ctPersistenceHelper.setCTCollectionIdWithSafeCloseable(
-						DLFileVersionPreview.class, primaryKey)) {
-
-				DLFileVersionPreview dlFileVersionPreview =
-					(DLFileVersionPreview)entityCache.getResult(
-						DLFileVersionPreviewImpl.class, primaryKey);
-
-				if (dlFileVersionPreview == null) {
-					if (uncachedPrimaryKeys == null) {
-						uncachedPrimaryKeys = new HashSet<>();
-					}
-
-					uncachedPrimaryKeys.add(primaryKey);
-				}
-				else {
-					map.put(primaryKey, dlFileVersionPreview);
-				}
-			}
-		}
-
-		if (uncachedPrimaryKeys == null) {
-			return map;
-		}
-
-		if ((databaseInMaxParameters > 0) &&
-			(primaryKeys.size() > databaseInMaxParameters)) {
-
-			Iterator<Serializable> iterator = primaryKeys.iterator();
-
-			while (iterator.hasNext()) {
-				Set<Serializable> page = new HashSet<>();
-
-				for (int i = 0;
-					 (i < databaseInMaxParameters) && iterator.hasNext(); i++) {
-
-					page.add(iterator.next());
-				}
-
-				map.putAll(fetchByPrimaryKeys(page));
-			}
-
-			return map;
-		}
-
-		StringBundler sb = new StringBundler((primaryKeys.size() * 2) + 1);
-
-		sb.append(getSelectSQL());
-		sb.append(" WHERE ");
-		sb.append(getPKDBName());
-		sb.append(" IN (");
-
-		for (Serializable primaryKey : primaryKeys) {
-			sb.append((long)primaryKey);
-
-			sb.append(",");
-		}
-
-		sb.setIndex(sb.index() - 1);
-
-		sb.append(")");
-
-		String sql = sb.toString();
-
-		Session session = null;
-
-		try {
-			session = openSession();
-
-			Query query = session.createQuery(sql);
-
-			for (DLFileVersionPreview dlFileVersionPreview :
-					(List<DLFileVersionPreview>)query.list()) {
-
-				map.put(
-					dlFileVersionPreview.getPrimaryKeyObj(),
-					dlFileVersionPreview);
-
-				cacheResult(dlFileVersionPreview);
-			}
-		}
-		catch (Exception exception) {
-			throw processException(exception);
-		}
-		finally {
-			closeSession(session);
-		}
-
-		return map;
 	}
 
 	/**
@@ -1637,9 +1348,6 @@ public class DLFileVersionPreviewPersistenceImpl
 	private static final String _ORDER_BY_ENTITY_ALIAS =
 		"dlFileVersionPreview.";
 
-	private static final String _NO_SUCH_ENTITY_WITH_PRIMARY_KEY =
-		"No DLFileVersionPreview exists with the primary key ";
-
 	private static final String _NO_SUCH_ENTITY_WITH_KEY =
 		"No DLFileVersionPreview exists with the key {";
 
@@ -1652,4 +1360,4 @@ public class DLFileVersionPreviewPersistenceImpl
 	}
 
 }
-// LIFERAY-SERVICE-BUILDER-HASH:205630360
+// LIFERAY-SERVICE-BUILDER-HASH:620594891
